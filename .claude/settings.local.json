@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(vercel link:*)",
+      "Bash(ls:*)",
+      "Bash(vercel storage:*)",
+      "Bash(npm install:*)",
+      "Bash(vercel api:*)",
+      "Bash(vercel.cmd api:*)",
+      "Bash(vercel token:*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''token'''',''''''''\\) or d.keys\\(\\)\\)\\)\")",
+      "Read(//c/Users/Usuario/.vercel/**)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,'''':'''',str\\(v\\)[:20]\\) for k,v in d.items\\(\\)]\")",
+      "Read(//c/Users/Usuario/**)",
+      "Bash(vercel install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(python -c \":*)",
+      "Bash(npm run:*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+    ]
+  }
+}

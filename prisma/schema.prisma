@@ -1,0 +1,68 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+  schemas   = ["scraper"]
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  username      String?
+  password_hash String
+  status        String   @default("inactive")
+  role          String   @default("user")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("users")
+  @@schema("scraper")
+}
+
+model Place {
+  id                    String   @id @default(cuid())
+  input_id              String?
+  link                  String?
+  title                 String?
+  category              String?
+  address               String?
+  open_hours            Json?
+  popular_times         Json?
+  website               String?
+  phone                 String?
+  plus_code             String?
+  review_count          Int?
+  review_rating         Decimal? @db.Decimal(3, 1)
+  reviews_per_rating    Json?
+  latitude              Decimal? @db.Decimal(10, 7)
+  longitude             Decimal? @db.Decimal(10, 7)
+  cid                   String?
+  status                String?
+  descriptions          String?  @db.Text
+  reviews_link          String?
+  thumbnail             String?
+  timezone              String?
+  price_range           String?
+  data_id               String?
+  place_id              String?  @unique
+  images                Json?
+  reservations          Json?
+  order_online          Json?
+  menu                  Json?
+  owner                 Json?
+  complete_address      Json?
+  about                 Json?
+  user_reviews          Json?
+  user_reviews_extended Json?
+  emails                Json?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  @@map("places")
+  @@schema("scraper")
+}
