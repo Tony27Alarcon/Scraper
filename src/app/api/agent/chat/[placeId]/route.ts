@@ -22,14 +22,24 @@ export async function POST(
   // Fetch user's company for AI context
   const user = await prisma.user.findUnique({
     where:   { id: userId },
-    include: { company: { select: { name: true, industry: true, ai_context: true } } },
+    include: {
+      company: {
+        select: {
+          name: true,
+          industry: true,
+          description: true,
+          website: true,
+          ai_context: true,
+        },
+      },
+    },
   })
 
   const agent = createPlaceAgent({
-    placeId:        params.placeId,
+    placeId: params.placeId,
     userId,
     username,
-    companyContext: user?.company?.ai_context ?? null,
+    company: user?.company,
   })
 
   return createAgentUIStreamResponse({

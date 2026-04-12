@@ -11,10 +11,37 @@ export async function GET(
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const place = await prisma.place.findUnique({ where: { id: params.id } })
+  const userId = parseInt(session.user.id ?? '0')
+
+  const place = await prisma.place.findUnique({
+    where:   { id: params.id },
+    include: {
+      favorites: {
+        where:  { user_id: userId },
+        select: { id: true },
+      },
+      reactions: {
+        select: { emoji: true, user_id: true },
+      },
+    },
+  })
   if (!place) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-  return NextResponse.json(place)
+  const isFavorited = place.favorites.length > 0
+
+  const reactionMap = new Map<string, { count: number; reacted: boolean }>()
+  for (const r of place.reactions) {
+    const entry = reactionMap.get(r.emoji) ?? { count: 0, reacted: false }
+    entry.count++
+    if (r.user_id === userId) entry.reacted = true
+    reactionMap.set(r.emoji, entry)
+  }
+  const initialReactions = Array.from(reactionMap.entries()).map(([emoji, v]) => ({
+    emoji, count: v.count, reacted: v.reacted,
+  }))
+
+  const { favorites, reactions, ...placeData } = place
+  return NextResponse.json({ ...placeData, isFavorited, initialReactions })
 }
 
 const UpdateSchema = z.object({

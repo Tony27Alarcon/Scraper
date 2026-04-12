@@ -19,14 +19,24 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where:   { id: userId },
-    include: { company: { select: { ai_context: true } } },
+    include: {
+      company: {
+        select: {
+          name: true,
+          industry: true,
+          description: true,
+          website: true,
+          ai_context: true,
+        },
+      },
+    },
   })
 
   const agent = createMasterAgent({
     userId,
     username,
     currentPath,
-    companyContext: user?.company?.ai_context ?? null,
+    company: user?.company,
   })
 
   return createAgentUIStreamResponse({ agent, uiMessages: messages })

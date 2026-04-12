@@ -4,16 +4,33 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
-interface CreateProspectsAgentOptions {
-  userId:          number
-  username:        string
-  companyContext?: string | null
+interface CompanyProfile {
+  name:         string
+  industry?:    string | null
+  description?: string | null
+  website?:     string | null
+  ai_context:   string
 }
 
-export function createProspectsAgent({ userId, username, companyContext }: CreateProspectsAgentOptions) {
-  const companySection = companyContext
-    ? `\n\n## Perfil de la empresa (criterios de selección)\n${companyContext}`
-    : ''
+interface CreateProspectsAgentOptions {
+  userId:   number
+  username: string
+  company?: CompanyProfile | null
+}
+
+function buildCompanySection(company?: CompanyProfile | null): string {
+  if (!company) return ''
+  const lines = ['## Empresa (criterios de selección)']
+  lines.push(`- **Nombre:** ${company.name}`)
+  if (company.industry)    lines.push(`- **Industria / Nicho:** ${company.industry}`)
+  if (company.website)     lines.push(`- **Sitio web:** ${company.website}`)
+  if (company.description) lines.push(`- **Descripción:** ${company.description}`)
+  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios\n${company.ai_context}`)
+  return '\n\n' + lines.join('\n')
+}
+
+export function createProspectsAgent({ userId, username, company }: CreateProspectsAgentOptions) {
+  const companySection = buildCompanySection(company)
 
   return new ToolLoopAgent({
     model: google('gemini-2.5-flash'),

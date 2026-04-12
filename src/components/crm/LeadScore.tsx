@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/ToastProvider'
 
 interface LeadScoreProps {
   placeId:      string
@@ -9,22 +10,27 @@ interface LeadScoreProps {
   size?:        'sm' | 'md'
 }
 
-async function saveScore(placeId: string, score: number | null) {
-  await fetch(`/api/places/${placeId}/crm`, {
-    method:  'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ lead_score: score }),
-  })
-}
-
 export function LeadScore({ placeId, initialScore, size = 'md' }: LeadScoreProps) {
   const [score, setScore] = useState<number | null>(initialScore ?? null)
   const [hover, setHover] = useState(0)
+  const { toast } = useToast()
 
-  function handleClick(n: number) {
+  async function handleClick(n: number) {
+    const prev = score
     const next = score === n ? null : n
     setScore(next)
-    saveScore(placeId, next)
+    try {
+      const res = await fetch(`/api/places/${placeId}/crm`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ lead_score: next }),
+      })
+      if (!res.ok) throw new Error()
+      toast({ type: 'success', message: next ? `Puntaje: ${next}/5` : 'Puntaje eliminado' })
+    } catch {
+      setScore(prev)
+      toast({ type: 'error', message: 'Error al guardar el puntaje' })
+    }
   }
 
   // ── sm: mini dots ──────────────────────────────────────────────────────

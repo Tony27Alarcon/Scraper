@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlaceNote } from '@/types/place'
+import { useToast } from '@/components/ui/ToastProvider'
 
 interface NotesThreadProps {
   placeId:       string
@@ -27,7 +28,9 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
   const [notes,   setNotes]   = useState<PlaceNote[]>([])
   const [text,    setText]    = useState('')
   const [loading, setLoading] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef  = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     fetch(`/api/places/${placeId}/notes`)
@@ -40,8 +43,16 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [notes.length])
 
-  async function addNote(e: React.FormEvent) {
-    e.preventDefault()
+  function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setText(e.target.value)
+    // Auto-resize
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 72) + 'px'
+  }
+
+  async function addNote(e?: React.FormEvent) {
+    e?.preventDefault()
     if (!text.trim() || loading) return
     setLoading(true)
     try {
@@ -50,17 +61,34 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ content: text.trim() }),
       })
+      if (!res.ok) throw new Error()
       const note = await res.json()
       setNotes(prev => [...prev, note])
       setText('')
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+      toast({ type: 'success', message: 'Nota añadida' })
+    } catch {
+      toast({ type: 'error', message: 'Error al añadir la nota' })
     } finally {
       setLoading(false)
     }
   }
 
   async function deleteNote(id: number) {
-    await fetch(`/api/notes/${id}`, { method: 'DELETE' })
-    setNotes(prev => prev.filter(n => n.id !== id))
+    try {
+      await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+      setNotes(prev => prev.filter(n => n.id !== id))
+      toast({ type: 'info', message: 'Nota eliminada' })
+    } catch {
+      toast({ type: 'error', message: 'Error al eliminar la nota' })
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      addNote()
+    }
   }
 
   return (
@@ -96,7 +124,7 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
                       </button>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5 break-words leading-relaxed">
+                  <p className="text-sm text-gray-700 mt-0.5 break-words leading-relaxed whitespace-pre-wrap">
                     {note.content}
                   </p>
                 </div>
@@ -107,12 +135,20 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
         </div>
       )}
 
-      <form onSubmit={addNote} className="flex gap-2 pt-1 border-t border-gray-100">
-        <input
+      <form onSubmit={addNote} className="flex gap-2 pt-1 border-t border-gray-100 items-end">
+        <textarea
+          ref={textareaRef}
           value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Agregar una nota..."
-          className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:bg-white transition-all"
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Agregar una nota… (Enter para enviar)"
+          rows={1}
+          className={cn(
+            'flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2',
+            'focus:outline-none focus:ring-2 focus:ring-brand-200 focus:bg-white transition-all',
+            'resize-none overflow-hidden leading-relaxed',
+          )}
+          style={{ maxHeight: '72px' }}
         />
         <button
           type="submit"

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/ToastProvider'
 
 interface FavoriteButtonProps {
   placeId:          string
@@ -14,6 +15,7 @@ export function FavoriteButton({ placeId, initialFavorited, size = 'md' }: Favor
   const [favorited, setFavorited] = useState(initialFavorited)
   const [loading,   setLoading]   = useState(false)
   const [pop,       setPop]       = useState(false)
+  const { toast } = useToast()
 
   async function toggle() {
     if (loading) return
@@ -22,9 +24,12 @@ export function FavoriteButton({ placeId, initialFavorited, size = 'md' }: Favor
     setFavorited(next)
     if (next) { setPop(true); setTimeout(() => setPop(false), 400) }
     try {
-      await fetch(`/api/places/${placeId}/favorite`, { method: 'POST' })
+      const res = await fetch(`/api/places/${placeId}/favorite`, { method: 'POST' })
+      if (!res.ok) throw new Error()
+      toast({ type: 'success', message: next ? 'Añadido a favoritos' : 'Eliminado de favoritos' })
     } catch {
       setFavorited(!next)
+      toast({ type: 'error', message: 'Error al guardar favorito' })
     } finally {
       setLoading(false)
     }

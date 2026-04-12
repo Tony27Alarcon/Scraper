@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/ToastProvider'
 
 type Temp = 'cold' | 'warm' | 'hot' | null
 
@@ -19,24 +20,33 @@ interface TemperatureBadgeProps {
   size?:       'sm' | 'md'
 }
 
-async function saveTemp(placeId: string, temp: Temp) {
-  await fetch(`/api/places/${placeId}/crm`, {
-    method:  'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ lead_temperature: temp }),
-  })
-}
-
 export function TemperatureBadge({ placeId, initialTemp, size = 'sm' }: TemperatureBadgeProps) {
   const [temp, setTemp] = useState<Temp>((initialTemp as Temp) ?? null)
+  const { toast } = useToast()
+
+  async function saveTemp(next: Temp) {
+    const prev = temp
+    setTemp(next)
+    try {
+      const res = await fetch(`/api/places/${placeId}/crm`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ lead_temperature: next }),
+      })
+      if (!res.ok) throw new Error()
+      toast({ type: 'success', message: next ? `Temperatura: ${CFG[next].label}` : 'Temperatura eliminada' })
+    } catch {
+      setTemp(prev)
+      toast({ type: 'error', message: 'Error al guardar la temperatura' })
+    }
+  }
 
   // ── sm: click to cycle ──────────────────────────────────────────────────
   if (size === 'sm') {
     const cycle = () => {
       const idx  = CYCLE.indexOf(temp)
       const next = CYCLE[(idx + 1) % CYCLE.length]
-      setTemp(next)
-      saveTemp(placeId, next)
+      saveTemp(next)
     }
 
     const cfg = temp ? CFG[temp] : null
@@ -58,8 +68,7 @@ export function TemperatureBadge({ placeId, initialTemp, size = 'sm' }: Temperat
   // ── md: button group ────────────────────────────────────────────────────
   function pick(t: Temp) {
     const next = temp === t ? null : t
-    setTemp(next)
-    saveTemp(placeId, next)
+    saveTemp(next)
   }
 
   return (
