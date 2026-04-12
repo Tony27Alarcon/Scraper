@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { PlacesTable } from '@/components/places/PlacesTable'
 import { PlaceFilters } from '@/components/places/PlaceFilters'
+import { PlacesMap } from '@/components/places/PlacesMap'
 import { ImportCSVButton } from '@/components/places/ImportCSVButton'
+import { ViewToggle } from '@/components/places/ViewToggle'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { getServerSession } from 'next-auth'
@@ -23,6 +25,7 @@ interface SearchParams {
   sort?:          string
   order?:         string
   prospect_list?: string
+  view?:          string
 }
 
 async function getPlaces(params: SearchParams, userId: number) {
@@ -160,9 +163,10 @@ export default async function PlacesPage({
 }: {
   searchParams: SearchParams
 }) {
-  const session = await getServerSession(authOptions)
-  const userId  = parseInt(session?.user?.id ?? '0')
-  const result  = await getPlaces(searchParams, userId)
+  const session   = await getServerSession(authOptions)
+  const userId    = parseInt(session?.user?.id ?? '0')
+  const result    = await getPlaces(searchParams, userId)
+  const isMapView = searchParams.view === 'map'
 
   return (
     <div className="space-y-5">
@@ -173,15 +177,18 @@ export default async function PlacesPage({
             {result.total.toLocaleString('es-ES')} lugares encontrados
           </p>
         </div>
-        {session?.user?.role === 'admin' && (
-          <div className="flex items-center gap-2">
-            <ImportCSVButton />
-            <Link href="/places/new" className="btn-primary">
-              <Plus className="w-4 h-4" />
-              Nuevo Lugar
-            </Link>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <ViewToggle currentView={searchParams.view ?? 'table'} />
+          {session?.user?.role === 'admin' && (
+            <>
+              <ImportCSVButton />
+              <Link href="/places/new" className="btn-primary">
+                <Plus className="w-4 h-4" />
+                Nuevo Lugar
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       <PlaceFilters
@@ -207,16 +214,20 @@ export default async function PlacesPage({
         hotCount={result.hotCount}
       />
 
-      <PlacesTable
-        data={result.data as any}
-        total={result.total}
-        page={result.page}
-        totalPages={result.totalPages}
-        isAdmin={session?.user?.role === 'admin'}
-        currentUserId={userId}
-        currentSort={searchParams.sort   ?? 'recent'}
-        currentOrder={searchParams.order ?? 'desc'}
-      />
+      {isMapView ? (
+        <PlacesMap />
+      ) : (
+        <PlacesTable
+          data={result.data as any}
+          total={result.total}
+          page={result.page}
+          totalPages={result.totalPages}
+          isAdmin={session?.user?.role === 'admin'}
+          currentUserId={userId}
+          currentSort={searchParams.sort   ?? 'recent'}
+          currentOrder={searchParams.order ?? 'desc'}
+        />
+      )}
     </div>
   )
 }
