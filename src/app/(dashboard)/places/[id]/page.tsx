@@ -3,19 +3,19 @@ import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { CRMPanel }    from '@/components/crm/CRMPanel'
 import { AgentChat }   from '@/components/places/AgentChat'
 import { notFound }    from 'next/navigation'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { AddToListButton } from '@/components/places/AddToListButton'
 
 export default async function PlaceDetailPage({
   params,
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { back?: string }
+  searchParams: { back?: string; prev?: string; next?: string }
 }) {
-  // URL de retorno con los filtros activos preservados
   const backUrl = searchParams.back
     ? `/places?${decodeURIComponent(searchParams.back)}`
     : '/places'
@@ -40,7 +40,6 @@ export default async function PlaceDetailPage({
 
   const isFavorited = place.favorites.length > 0
 
-  // Aggregate reactions: { emoji → { count, reacted } }
   const reactionMap = new Map<string, { count: number; reacted: boolean }>()
   for (const r of place.reactions) {
     const entry = reactionMap.get(r.emoji) ?? { count: 0, reacted: false }
@@ -54,26 +53,75 @@ export default async function PlaceDetailPage({
     reacted: v.reacted,
   }))
 
+  // Build prev/next URLs preserving back param
+  function navUrl(id: string) {
+    const p = new URLSearchParams()
+    if (searchParams.back) p.set('back', searchParams.back)
+    return `/places/${id}?${p.toString()}`
+  }
+
   return (
     <div className="max-w-6xl space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href={backUrl} className="btn-secondary p-2">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 truncate max-w-lg">
+      {/* Header con breadcrumb y navegación */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1.5 text-sm min-w-0">
+            <Link
+              href={backUrl}
+              className="text-gray-500 hover:text-brand-600 transition-colors shrink-0"
+            >
+              Lugares
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+            <span className="text-gray-900 font-medium truncate">
               {place.title ?? 'Sin título'}
-            </h1>
-            <p className="text-gray-500 mt-0.5">{place.category ?? '—'}</p>
+            </span>
           </div>
+
+          {/* Prev/Next navigation */}
+          {(searchParams.prev || searchParams.next) && (
+            <div className="flex items-center gap-1 shrink-0">
+              {searchParams.prev ? (
+                <Link
+                  href={navUrl(searchParams.prev)}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                  title="Lugar anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Link>
+              ) : (
+                <span className="p-1.5 rounded-lg border border-gray-100 text-gray-200">
+                  <ChevronLeft className="w-4 h-4" />
+                </span>
+              )}
+              {searchParams.next ? (
+                <Link
+                  href={navUrl(searchParams.next)}
+                  className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                  title="Siguiente lugar"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <span className="p-1.5 rounded-lg border border-gray-100 text-gray-200">
+                  <ChevronRight className="w-4 h-4" />
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        {isAdmin && (
-          <Link href={`/places/${place.id}/edit`} className="btn-primary">
-            <Pencil className="w-4 h-4" />
-            Editar
-          </Link>
-        )}
+
+        {/* Acciones de la derecha */}
+        <div className="flex items-center gap-2 shrink-0">
+          <AddToListButton placeId={place.id} />
+          {isAdmin && (
+            <Link href={`/places/${place.id}/edit`} className="btn-primary">
+              <Pencil className="w-4 h-4" />
+              Editar
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-5 items-start">

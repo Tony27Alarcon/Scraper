@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bot, Loader2, Search, ThermometerSun, FileText } from 'lucide-react'
+import { Loader2, Search, ThermometerSun, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/ToastProvider'
 
 interface AgentQuickActionsProps {
   placeId: string
@@ -11,59 +12,46 @@ interface AgentQuickActionsProps {
 
 const QUICK_PROMPTS = [
   {
-    label: 'Investigar información',
+    label:  'Investigar información',
     prompt: 'Investiga este lugar en internet y completa la información que falte',
-    icon: Search
+    icon:   Search,
   },
   {
-    label: 'Evaluar prioridad',
+    label:  'Evaluar prioridad',
     prompt: 'Evalúa la prioridad de este lead y actualiza score y temperatura',
-    icon: ThermometerSun
+    icon:   ThermometerSun,
   },
   {
-    label: 'Generar resumen',
+    label:  'Generar resumen como nota',
     prompt: 'Haz un resumen del lugar y añádelo como nota',
-    icon: FileText
-  }
+    icon:   FileText,
+  },
 ]
 
 export function AgentQuickActions({ placeId }: AgentQuickActionsProps) {
-  const [isOpen, setIsOpen] = useState(false)
   const [loadingPrompt, setLoadingPrompt] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
+  const router  = useRouter()
+  const { toast } = useToast()
 
   async function handleAction(prompt: string) {
+    if (loadingPrompt) return
     setLoadingPrompt(prompt)
-    setIsOpen(false)
     try {
       const res = await fetch(`/api/agent/chat/${placeId}`, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           messages: [{
-            id:   Date.now().toString(),
-            role: 'user',
+            id:    Date.now().toString(),
+            role:  'user',
             parts: [{ type: 'text', text: prompt }],
           }],
         }),
       })
-      
-      if (!res.ok) throw new Error('Error en la petición')
-      
-      // Consume the stream so the agent finishes executing
+
+      if (!res.ok) throw new Error()
+
+      // Consume stream so the agent finishes
       const reader = res.body?.getReader()
       if (reader) {
         while (true) {
@@ -71,57 +59,40 @@ export function AgentQuickActions({ placeId }: AgentQuickActionsProps) {
           if (done) break
         }
       }
-      
-      // Refresh the route to show updated data
+
       router.refresh()
-    } catch (error) {
-      console.error('Error executing agent action:', error)
-      alert('Error al ejecutar la acción del agente')
+    } catch {
+      toast({ type: 'error', message: 'Error al ejecutar la acción del agente' })
     } finally {
       setLoadingPrompt(null)
     }
   }
 
   return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={loadingPrompt !== null}
-        className={cn(
-          "p-1.5 rounded-lg transition-colors flex items-center gap-1",
-          loadingPrompt ? "text-brand-600 bg-brand-50" : "text-gray-400 hover:text-brand-600 hover:bg-brand-50"
-        )}
-        title="Acciones de IA"
-      >
-        {loadingPrompt ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Bot className="w-4 h-4" />
-        )}
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden py-1">
-          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Asistente IA
-            </span>
-          </div>
-          {QUICK_PROMPTS.map((action, i) => {
-            const Icon = action.icon
-            return (
-              <button
-                key={i}
-                onClick={() => handleAction(action.prompt)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left"
-              >
-                <Icon className="w-4 h-4 opacity-70" />
-                {action.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+    <div className="flex items-center gap-0.5">
+      {QUICK_PROMPTS.map((action) => {
+        const Icon      = action.icon
+        const isLoading = loadingPrompt === action.prompt
+        return (
+          <button
+            key={action.prompt}
+            onClick={() => handleAction(action.prompt)}
+            disabled={loadingPrompt !== null}
+            title={action.label}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors',
+              isLoading
+                ? 'text-brand-600 bg-brand-50'
+                : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 disabled:opacity-40',
+            )}
+          >
+            {isLoading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Icon    className="w-4 h-4" />
+            }
+          </button>
+        )
+      })}
     </div>
   )
 }
