@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { CRMPanel }    from '@/components/crm/CRMPanel'
+import { AgentChat }   from '@/components/places/AgentChat'
 import { notFound }    from 'next/navigation'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import Link from 'next/link'
@@ -81,6 +82,8 @@ export default async function PlaceDetailPage({
           initialReactions={initialReactions}
         />
       </div>
+
+      <AgentChat placeId={place.id} />
     </div>
   )
 }

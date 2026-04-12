@@ -16,7 +16,8 @@
       "Bash(npx prisma:*)",
       "Bash(python -c \":*)",
       "Bash(npm run:*)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

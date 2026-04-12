@@ -32,7 +32,7 @@ export function TemperatureBadge({ placeId, initialTemp, size = 'sm' }: Temperat
 
   // ── sm: click to cycle ──────────────────────────────────────────────────
   if (size === 'sm') {
-    function cycle() {
+    const cycle = () => {
       const idx  = CYCLE.indexOf(temp)
       const next = CYCLE[(idx + 1) % CYCLE.length]
       setTemp(next)
