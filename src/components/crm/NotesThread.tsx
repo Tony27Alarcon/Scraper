@@ -5,6 +5,7 @@ import { Send, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlaceNote } from '@/types/place'
 import { useToast } from '@/components/ui/ToastProvider'
+import ReactMarkdown from 'react-markdown'
 
 interface NotesThreadProps {
   placeId:       string
@@ -124,9 +125,27 @@ export function NotesThread({ placeId, currentUserId, isAdmin }: NotesThreadProp
                       </button>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5 break-words leading-relaxed whitespace-pre-wrap">
-                    {note.content}
-                  </p>
+                  <div className="text-sm text-gray-700 mt-0.5 break-words leading-relaxed prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p:      ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        em:     ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                        h1:     ({ children }) => <p className="font-bold text-base text-gray-900 mt-2 mb-1">{children}</p>,
+                        h2:     ({ children }) => <p className="font-semibold text-sm text-gray-800 mt-1.5 mb-1">{children}</p>,
+                        h3:     ({ children }) => <p className="font-medium text-sm text-gray-700 mt-1 mb-0.5">{children}</p>,
+                        ul:     ({ children }) => <ul className="list-disc pl-4 my-1 space-y-0.5">{children}</ul>,
+                        ol:     ({ children }) => <ol className="list-decimal pl-4 my-1 space-y-0.5">{children}</ol>,
+                        li:     ({ children }) => <li className="leading-snug">{children}</li>,
+                        code:   ({ children }) => <code className="bg-gray-100 border border-gray-200 px-1 py-0.5 rounded text-xs font-mono text-gray-800">{children}</code>,
+                        pre:    ({ children }) => <pre className="bg-gray-100 rounded-lg p-2 my-1.5 overflow-x-auto text-xs font-mono">{children}</pre>,
+                        hr:     () => <hr className="my-2 border-gray-200" />,
+                        a:      ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{children}</a>,
+                      }}
+                    >
+                      {note.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             )

@@ -123,8 +123,16 @@ export async function POST(req: NextRequest) {
         const result = await prisma.place.createMany({ data: chunk as any })
         imported += result.count
       }
-    } catch {
-      return NextResponse.json({ error: 'Error al guardar en base de datos' }, { status: 500 })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[places/import] Error al guardar en base de datos:', err)
+      return NextResponse.json(
+        {
+          error: 'Error al guardar en base de datos',
+          detail: process.env.NODE_ENV === 'development' ? message : undefined,
+        },
+        { status: 500 }
+      )
     }
   }
 

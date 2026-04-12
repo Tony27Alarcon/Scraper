@@ -8,9 +8,10 @@ import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 
 const QUICK_PROMPTS = [
-  'Analiza los mejores candidatos y crea una lista con los 50 prospectos más relevantes para mi empresa',
-  'Crea una lista de los 50 negocios con mayor puntaje y temperatura hot/warm',
-  'Selecciona los 50 mejores prospectos que tengan sitio web y buen rating',
+  'Diagnostica el dataset completo y crea una lista curada con los mejores prospectos para mi empresa — explícame tu criterio de selección',
+  'Encuentra los negocios hot y warm con datos de contacto completos — quiero una lista para llamar esta semana',
+  'Selecciona prospectos con web profesional y buen rating que aún no hemos contactado — son oportunidades ocultas',
+  'Analiza qué ciudades y categorías tienen mayor concentración de prospectos de calidad',
 ]
 
 export function ProspectAgentChat() {
@@ -43,7 +44,7 @@ export function ProspectAgentChat() {
       >
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-brand-600" />
-          <span className="font-medium text-gray-900">Agente de Prospectos</span>
+          <span className="font-medium text-gray-900">Radar — Estratega de Prospectos</span>
           {isLoading && (
             <span className="flex items-center gap-1 text-xs text-brand-600">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -63,7 +64,7 @@ export function ProspectAgentChat() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500 text-center">
-                  El agente analizará tus lugares y seleccionará los 50 mejores prospectos según el perfil de tu empresa.
+                  Radar analiza tu dataset completo y selecciona los mejores prospectos con criterio estratégico
                 </p>
                 <div className="flex flex-col gap-2">
                   {QUICK_PROMPTS.map((prompt) => (

@@ -26,13 +26,13 @@ interface CreateMasterAgentOptions {
 
 function buildCompanySection(company?: CompanyProfile | null): string {
   if (!company) return ''
-  const lines = ['## Empresa (usa este perfil para contextualizar todo tu trabajo)']
+  const lines = ['\n## Tu empresa (usa este perfil para TODAS tus decisiones)']
   lines.push(`- **Nombre:** ${company.name}`)
   if (company.industry)    lines.push(`- **Industria / Nicho:** ${company.industry}`)
   if (company.website)     lines.push(`- **Sitio web:** ${company.website}`)
-  if (company.description) lines.push(`- **Descripción:** ${company.description}`)
-  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios\n${company.ai_context}`)
-  return '\n\n' + lines.join('\n')
+  if (company.description) lines.push(`- **Descripcion:** ${company.description}`)
+  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios del cliente\n${company.ai_context}`)
+  return lines.join('\n')
 }
 
 export function createMasterAgent({ userId, username, company, currentPath }: CreateMasterAgentOptions) {
@@ -40,69 +40,119 @@ export function createMasterAgent({ userId, username, company, currentPath }: Cr
 
   return new ToolLoopAgent({
     model: google('gemini-2.5-flash'),
-    stopWhen: stepCountIs(20),
-    instructions: `Eres el Agente Maestro del Scraper Dashboard. Puedes controlar todo el sistema: buscar y filtrar lugares, investigar en internet, actualizar información, calificar leads, hacer operaciones masivas y crear listas de prospectos.
+    stopWhen: stepCountIs(25),
+    instructions: `# Identidad
 
-## Contexto actual
-- Página activa: ${currentPath}
-- Usuario: ${username}${companySection}
+Eres **Atlas**, Analista Senior de Inteligencia Comercial y Prospeccion. No eres un chatbot que espera instrucciones — eres un estratega de ventas con pensamiento critico que toma la iniciativa, investiga a fondo, y entrega resultados accionables.
 
-## Capacidades disponibles
+Tu mision: convertir datos crudos de negocios en oportunidades de venta reales para la empresa. Cada interaccion contigo debe dejar el CRM mas rico, mas limpio y mas accionable que antes.
 
-**Consulta:** searchPlaces, getPlaceDetail, getDashboardStats
-**Investigación web:** searchWeb, scrapePage
-**Escritura individual:** updatePlace, setPriority, addNote
-**Operaciones masivas:** bulkSetPriority
-**Prospectos:** saveProspectList, getProspectLists
+## Contexto de sesion
+- Pagina activa: ${currentPath}
+- Usuario: ${username}
+- Fecha: ${new Date().toISOString().split('T')[0]}
+${companySection}
 
-## Proceso de trabajo
+## Personalidad y estilo de trabajo
 
-**Para consultas rápidas:**
-→ searchPlaces o getDashboardStats según lo que se pida
+**Proactivo, no reactivo.** Cuando el usuario dice "investiga este lugar", tu no solo buscas info — la verificas, la cruzas, llenas TODOS los campos vacios que puedas, calificas el lead, documentas hallazgos Y sugieres proximos pasos. Cuando ves un patron en los datos, lo señalas sin que te lo pidan.
 
-**Para investigar y enriquecer UN lugar:**
-1. getPlaceDetail → conocer el estado actual
-2. searchWeb x2 → queries distintos (nombre+ciudad+teléfono, nombre+ciudad+web)
-3. scrapePage → si hay web oficial, extraer contenido completo
-4. updatePlace → actualizar con datos verificados
-5. setPriority → calificar según criterios de la empresa
-6. addNote → documentar hallazgos, fuentes y razonamiento
+**Analitico y opinado.** No presentas datos planos — los interpretas. "Este negocio tiene 4.8 estrellas con 2000+ resenas y web profesional. Es score 5, hot. Recomiendo contacto inmediato." Siempre justifica tus decisiones con datos.
 
-**Para operaciones masivas:**
-1. searchPlaces → obtener IDs con filtros específicos
-2. Confirmar con el usuario si son más de 10 lugares
-3. bulkSetPriority → aplicar cambios
+**Orientado a la venta.** Cada accion que tomas debe acercar al equipo a cerrar un trato. Si un dato no ayuda a vender, no lo priorices. Si un prospecto es malo, dilo directamente y no pierdas tiempo.
 
-**Para crear listas de prospectos:**
-1. searchPlaces → obtener candidatos con filtros
-2. saveProspectList → guardar los mejores 50 con razones
+## Marco de evaluacion de prospectos
 
-## Reglas importantes
-- Siempre haz mínimo 2 búsquedas web distintas al investigar un lugar
-- Solo actualiza campos con información verificada de fuentes confiables
-- Para operaciones masivas de más de 10 lugares: confirma con el usuario antes de ejecutar
-- Termina siempre las investigaciones con una nota que documente los hallazgos
-- Si la página activa es /places/[id], el ID del lugar está en la ruta y puedes usarlo directamente
+Cuando evalues un negocio, analiza estas 5 dimensiones:
 
-Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acciones.`,
+1. **Presencia digital** — Tiene web? Redes sociales? Que tan profesional se ve? (Sin web = oportunidad de venderles una, o señal de negocio informal)
+2. **Reputacion** — Rating, cantidad de resenas, sentimiento general. Un negocio con 4.5+ y 100+ resenas es un negocio establecido y serio.
+3. **Datos de contacto** — Telefono directo? Email? Web con formulario? Mientras mas canales, mas facil el acercamiento.
+4. **Señales de inversion** — Precio alto ($$$ o $$$$), local grande, multiples sucursales, presencia en plataformas de reservas = negocio que invierte en crecimiento.
+5. **Fit con la empresa** — Encaja con la industria/nicho del cliente? Es el tipo de negocio que se beneficiaria de los servicios de la empresa?
+
+**Escala de score:**
+- **5 (Top):** Alta presencia digital + buena reputacion + datos completos + señales de inversion + fit perfecto. Contactar YA.
+- **4 (Bueno):** Cumple 3-4 dimensiones. Buen prospecto, prioridad alta.
+- **3 (Interesante):** Cumple 2-3 dimensiones. Vale la pena investigar mas o hacer seguimiento.
+- **2 (Bajo):** Solo 1 dimension fuerte. Baja prioridad, puede mejorar con enriquecimiento.
+- **1 (Descartado):** No cumple criterios, cerrado, duplicado, o no es el tipo de negocio correcto.
+
+**Temperatura:**
+- **hot:** Tiene todo para ser contactado ahora. No esperar.
+- **warm:** Tiene potencial pero necesita mas info o no es urgente. Seguimiento en 1-2 semanas.
+- **cold:** No hay señal de oportunidad inmediata. Revisar mas adelante o descartar.
+
+## Comportamientos proactivos — HAZ ESTO SIN QUE TE LO PIDAN
+
+1. **Si investigas un lugar y encuentras datos faltantes** → Llena TODO lo que encuentres (telefono, web, email, descripcion, ciudad, pais). No dejes campos vacios si la info existe online.
+2. **Si ves un lugar sin score ni temperatura** → Asignale uno basado en los datos disponibles. Un lugar sin evaluar es un lugar invisible para el equipo.
+3. **Si la investigacion revela que un negocio cerro o es duplicado** → Marcalo como status "cerrado" o "duplicado" y nota el hallazgo.
+4. **Si terminas una investigacion** → SIEMPRE deja una nota estructurada con: hallazgos clave, fuentes, score asignado y razonamiento, y proximos pasos recomendados.
+5. **Si el usuario pregunta algo vago como "que hay de nuevo"** → Dale las estadisticas del dashboard, señala los leads hot sin contactar, identifica los registros mas recientes sin evaluar.
+6. **Si encuentras la web oficial de un negocio** → Siempre haz scrapePage para extraer info completa. No te conformes solo con el snippet de Google.
+7. **Si el usuario esta en la pagina de un lugar (/places/[id])** → Usa ese ID directamente, no preguntes cual lugar quiere ver.
+8. **Si encuentras oportunidades o patrones en los datos** → Mencionalo proactivamente. "Ojo: hay 45 restaurantes en Lima sin telefono — quieres que investigue los top 10?"
+
+## Formato de notas de investigacion
+
+Cuando documentes una investigacion, usa este formato:
+
+---
+📋 **Investigacion: [Nombre del Negocio]**
+📅 Fecha: [fecha]
+🔍 Fuentes: [URLs consultadas]
+
+**Hallazgos clave:**
+- [dato 1]
+- [dato 2]
+
+**Datos actualizados:**
+- [campo]: [valor anterior] → [valor nuevo]
+
+**Evaluacion:**
+- Score: [X/5] | Temperatura: [hot/warm/cold]
+- Razonamiento: [por que esta calificacion]
+
+**Proximos pasos recomendados:**
+- [accion 1]
+- [accion 2]
+---
+
+## Formato de outreach / copy de marketing
+
+Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
+- Usa tono profesional pero cercano, adaptado a la industria del prospecto
+- Personaliza con datos reales del negocio (nombre, ubicacion, puntos fuertes)
+- Incluye un gancho basado en un pain point real del sector
+- Cierra con un call-to-action claro
+- Guarda el draft como nota en el lugar para referencia del equipo
+
+## Reglas operativas
+- Minimo 2 busquedas web distintas al investigar un lugar
+- Solo actualiza campos con informacion verificada de fuentes confiables
+- Para operaciones masivas de mas de 10 lugares: confirma con el usuario antes de ejecutar
+- Si la pagina activa es /places/[id], el ID del lugar esta en la ruta
+- Responde siempre en español
+- Se conciso en el texto explicativo pero exhaustivo en las acciones — haz todo lo que puedas en cada turno`,
 
     tools: {
       // ── CONSULTA ─────────────────────────────────────────────────────────────
       searchPlaces: tool({
-        description: 'Busca y filtra lugares en la base de datos. Devuelve id, título, categoría, ciudad, score, temperatura, teléfono, web y rating. Úsalo para encontrar lugares antes de investigarlos, calificarlos o crear listas.',
+        description: 'Busca y filtra lugares en la base de datos. Usala para: encontrar prospectos por criterios, identificar registros incompletos, preparar operaciones masivas, o responder preguntas sobre el dataset. Devuelve datos CRM clave de cada resultado.',
         inputSchema: z.object({
-          search:      z.string().optional().describe('Búsqueda libre: título, dirección, categoría, teléfono'),
-          category:    z.string().optional().describe('Categoría del negocio (búsqueda parcial, case-insensitive)'),
-          city:        z.string().optional().describe('Ciudad exacta (case-insensitive)'),
-          country:     z.string().optional().describe('País exacto (case-insensitive)'),
+          search:      z.string().optional().describe('Busqueda libre en titulo, direccion, categoria o telefono'),
+          category:    z.string().optional().describe('Categoria del negocio (busqueda parcial, case-insensitive)'),
+          city:        z.string().optional().describe('Ciudad (case-insensitive)'),
+          country:     z.string().optional().describe('Pais (case-insensitive)'),
           temperature: z.enum(['hot', 'warm', 'cold']).optional().describe('Temperatura del lead'),
-          minScore:    z.number().min(1).max(5).optional().describe('Lead score mínimo (1-5)'),
-          hasPhone:    z.boolean().optional().describe('Solo lugares con teléfono'),
-          hasWebsite:  z.boolean().optional().describe('Solo lugares con sitio web'),
-          batchTag:    z.string().optional().describe('Filtrar por lote de importación'),
-          limit:       z.number().min(1).max(100).default(20).describe('Número de resultados a devolver'),
-          page:        z.number().min(1).default(1).describe('Página de resultados'),
-          sortBy:      z.enum(['score', 'rating', 'reviews', 'recent']).default('score').describe('Ordenar por: score=lead_score, rating=review_rating, reviews=review_count, recent=created_at'),
+          minScore:    z.number().min(1).max(5).optional().describe('Lead score minimo (1-5)'),
+          hasPhone:    z.boolean().optional().describe('true=con telefono, false=sin telefono'),
+          hasWebsite:  z.boolean().optional().describe('true=con sitio web, false=sin sitio web'),
+          batchTag:    z.string().optional().describe('Filtrar por lote/batch de importacion'),
+          limit:       z.number().min(1).max(100).default(20).describe('Numero de resultados'),
+          page:        z.number().min(1).default(1).describe('Pagina de resultados'),
+          sortBy:      z.enum(['score', 'rating', 'reviews', 'recent']).default('score').describe('Ordenar por: score, rating, reviews o fecha reciente'),
         }),
         execute: async ({ search, category, city, country, temperature, minScore, hasPhone, hasWebsite, batchTag, limit, page, sortBy }) => {
           try {
@@ -121,8 +171,10 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
             if (country)     where.country          = { equals: country, mode: 'insensitive' }
             if (temperature) where.lead_temperature = temperature
             if (minScore !== undefined) where.lead_score = { gte: minScore }
-            if (hasPhone)    where.phone   = { not: null }
-            if (hasWebsite)  where.website = { not: null }
+            if (hasPhone === true)  where.phone   = { not: null }
+            if (hasPhone === false) where.phone   = null
+            if (hasWebsite === true)  where.website = { not: null }
+            if (hasWebsite === false) where.website = null
             if (batchTag)    where.batch_tag = batchTag
 
             const orderBy: Prisma.PlaceOrderByWithRelationInput[] =
@@ -147,12 +199,14 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
                   country:          true,
                   phone:            true,
                   website:          true,
+                  emails:           true,
                   review_rating:    true,
                   review_count:     true,
                   lead_score:       true,
                   lead_temperature: true,
                   batch_tag:        true,
                   status:           true,
+                  descriptions:     true,
                 },
               }),
             ])
@@ -171,12 +225,14 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
                 country:          p.country,
                 phone:            p.phone ?? null,
                 website:          p.website ?? null,
+                emails:           p.emails ?? null,
                 rating:           p.review_rating ? Number(p.review_rating) : null,
                 reviews:          p.review_count,
                 lead_score:       p.lead_score,
                 lead_temperature: p.lead_temperature,
                 batch_tag:        p.batch_tag,
                 status:           p.status,
+                hasDescription:   !!p.descriptions,
               })),
             }
           } catch (err) {
@@ -186,9 +242,9 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
       }),
 
       getPlaceDetail: tool({
-        description: 'Obtiene la información completa de un lugar específico por ID: datos de contacto, horarios, descripción, calificación CRM y las últimas 5 notas. Úsalo antes de actualizar o investigar.',
+        description: 'Obtiene TODA la informacion de un lugar: contacto, horarios, descripcion, CRM, notas recientes y datos del dueño. Usala SIEMPRE antes de investigar, actualizar o evaluar un lugar. Te da el panorama completo para tomar decisiones.',
         inputSchema: z.object({
-          placeId: z.string().describe('ID del lugar en la base de datos'),
+          placeId: z.string().describe('ID del lugar'),
         }),
         execute: async ({ placeId }) => {
           try {
@@ -200,10 +256,31 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
                   take:    5,
                   select:  { content: true, username: true, created_at: true },
                 },
+                _count: {
+                  select: { favorites: true, reactions: true, notes: true },
+                },
               },
             })
             if (!place) return { error: `Lugar con ID ${placeId} no encontrado` }
-            return place
+
+            return {
+              ...place,
+              review_rating: place.review_rating ? Number(place.review_rating) : null,
+              latitude:      place.latitude ? Number(place.latitude) : null,
+              longitude:     place.longitude ? Number(place.longitude) : null,
+              totalNotes:    place._count.notes,
+              totalFavorites: place._count.favorites,
+              totalReactions: place._count.reactions,
+              camposFaltantes: [
+                !place.phone && 'phone',
+                !place.website && 'website',
+                !place.descriptions && 'descriptions',
+                !place.city && 'city',
+                !place.country && 'country',
+                !place.lead_score && 'lead_score',
+                !place.lead_temperature && 'lead_temperature',
+              ].filter(Boolean),
+            }
           } catch (err) {
             return { error: `Error al obtener lugar: ${String(err)}` }
           }
@@ -211,11 +288,11 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
       }),
 
       getDashboardStats: tool({
-        description: 'Obtiene estadísticas globales del sistema: total de lugares, distribución por temperatura y score, top categorías, cuántos tienen teléfono y web. Úsalo para responder preguntas sobre el estado general del dataset.',
+        description: 'Estadisticas globales del CRM: totales, distribucion por temperatura/score, top categorias, cobertura de contacto, registros sin evaluar. Usala para dar reportes rapidos o identificar donde hay trabajo pendiente.',
         inputSchema: z.object({}),
         execute: async () => {
           try {
-            const [total, byTemperature, byScore, topCategories, withPhone, withWebsite, ratingAgg] = await Promise.all([
+            const [total, byTemperature, byScore, topCategories, withPhone, withWebsite, ratingAgg, topCities, recentCount, unscored] = await Promise.all([
               prisma.place.count(),
               prisma.place.groupBy({ by: ['lead_temperature'], _count: { _all: true } }),
               prisma.place.groupBy({ by: ['lead_score'], _count: { _all: true }, orderBy: { lead_score: 'asc' } }),
@@ -228,12 +305,24 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
               prisma.place.count({ where: { phone:   { not: null } } }),
               prisma.place.count({ where: { website: { not: null } } }),
               prisma.place.aggregate({ _avg: { review_rating: true }, _count: { review_rating: true } }),
+              prisma.place.groupBy({
+                by:     ['city'],
+                _count: { _all: true },
+                orderBy: { _count: { city: 'desc' } },
+                take:   10,
+              }),
+              prisma.place.count({ where: { created_at: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+              prisma.place.count({ where: { lead_score: null } }),
             ])
 
             return {
               total,
               withPhone,
               withWebsite,
+              withoutPhone: total - withPhone,
+              withoutWebsite: total - withWebsite,
+              unscored,
+              recentlyAdded: recentCount,
               avgRating:    ratingAgg._avg.review_rating ? Number(ratingAgg._avg.review_rating).toFixed(1) : null,
               placesWithRating: ratingAgg._count.review_rating,
               byTemperature: byTemperature.map(t => ({
@@ -245,22 +334,26 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
                 count: s._count._all,
               })),
               topCategories: topCategories.map(c => ({
-                category: c.category ?? 'sin categoría',
+                category: c.category ?? 'sin categoria',
                 count:    c._count._all,
+              })),
+              topCities: topCities.map(c => ({
+                city:  c.city ?? 'sin ciudad',
+                count: c._count._all,
               })),
             }
           } catch (err) {
-            return { error: `Error al obtener estadísticas: ${String(err)}` }
+            return { error: `Error al obtener estadisticas: ${String(err)}` }
           }
         },
       }),
 
-      // ── WEB ──────────────────────────────────────────────────────────────────
+      // ── INVESTIGACION WEB ──────────────────────────────────────────────────
       searchWeb: tool({
-        description: 'Busca información en internet sobre un lugar o tema usando Firecrawl. Devuelve URLs, títulos y resumen del contenido. Haz múltiples búsquedas con queries distintos para cubrir teléfono, web oficial y horarios.',
+        description: 'Busca informacion en internet via Firecrawl. Usala para: encontrar telefono/web/email de negocios, verificar si un negocio existe, investigar competencia, o buscar datos del sector. SIEMPRE haz minimo 2 busquedas con queries diferentes para cada investigacion.',
         inputSchema: z.object({
-          query: z.string().describe('Query específico. Ej: "Restaurante El Señorío Lima Miraflores teléfono reservas"'),
-          limit: z.number().min(1).max(10).default(5).describe('Número máximo de resultados'),
+          query: z.string().describe('Query especifico y contextualizado. Ej: "Restaurante El Señorio Lima Miraflores telefono reservas" o "mejores agencias de marketing digital en Bogota"'),
+          limit: z.number().min(1).max(10).default(5).describe('Resultados maximos'),
         }),
         execute: async ({ query, limit }) => {
           try {
@@ -282,20 +375,20 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
                   url:         r.url ?? '',
                   title:       r.title ?? r.metadata?.title ?? '',
                   description: r.description ?? r.metadata?.description ?? '',
-                  content:     (r.markdown ?? '').slice(0, 1200),
+                  content:     (r.markdown ?? '').slice(0, 1500),
                 }
               }),
             }
           } catch (err) {
-            return { error: `Error en búsqueda web: ${String(err)}`, query, results: [] }
+            return { error: `Error en busqueda web: ${String(err)}`, query, results: [] }
           }
         },
       }),
 
       scrapePage: tool({
-        description: 'Extrae el contenido completo de una URL: web oficial, Google Maps, TripAdvisor, redes sociales. Úsala cuando encuentres una URL concreta en la búsqueda web que pueda tener teléfono, horarios o descripción del negocio.',
+        description: 'Extrae contenido completo de una URL. Usala en: webs oficiales de negocios (para contacto, servicios, precios), perfiles de redes sociales, paginas de resenas, directorios. SIEMPRE extrae la web oficial si la encuentras — ahi estan los datos mas valiosos.',
         inputSchema: z.object({
-          url: z.string().url().describe('URL completa de la página a extraer'),
+          url: z.string().url().describe('URL de la pagina a extraer'),
         }),
         execute: async ({ url }) => {
           try {
@@ -305,36 +398,43 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
               url,
               title:       result.metadata?.title ?? '',
               description: result.metadata?.description ?? '',
-              content:     (result.markdown ?? '').slice(0, 4000),
+              content:     (result.markdown ?? '').slice(0, 5000),
             }
           } catch (err) {
-            return { error: `Error al extraer página: ${String(err)}`, url }
+            return { error: `Error al extraer pagina: ${String(err)}`, url }
           }
         },
       }),
 
-      // ── ESCRITURA INDIVIDUAL ──────────────────────────────────────────────────
+      // ── ESCRITURA / ENRIQUECIMIENTO ─────────────────────────────────────────
       updatePlace: tool({
-        description: 'Actualiza campos de UN lugar específico con información verificada. Solo envía los campos que hayas confirmado con fuentes confiables.',
+        description: 'Actualiza campos de UN lugar con informacion verificada. Envia TODOS los campos que hayas encontrado de una sola vez — no hagas multiples llamadas. Si encontraste telefono, web, email y descripcion, actualiza todo junto.',
         inputSchema: z.object({
           placeId:      z.string().describe('ID del lugar a actualizar'),
-          descriptions: z.string().optional().describe('Descripción del negocio'),
-          phone:        z.string().optional().describe('Teléfono con código de país si es posible'),
+          descriptions: z.string().optional().describe('Descripcion del negocio: que hace, especialidad, publico objetivo'),
+          phone:        z.string().optional().describe('Telefono con codigo de pais (+51, +57, +34...)'),
           website:      z.string().url().optional().describe('URL del sitio web oficial'),
+          email:        z.string().email().optional().describe('Email de contacto del negocio'),
           price_range:  z.string().optional().describe('Rango de precios: $, $$, $$$ o $$$$'),
           timezone:     z.string().optional().describe('Zona horaria IANA, ej: America/Lima'),
-          status:       z.string().optional().describe('Estado del negocio'),
+          city:         z.string().optional().describe('Ciudad donde esta ubicado el negocio'),
+          country:      z.string().optional().describe('Pais donde esta ubicado el negocio'),
+          status:       z.string().optional().describe('Estado: activo, cerrado, duplicado, no_verificado'),
         }),
-        execute: async ({ placeId, ...data }) => {
+        execute: async ({ placeId, email, ...data }) => {
           try {
-            const cleaned = Object.fromEntries(
-              Object.entries(data).filter(([, v]) => v !== undefined && v !== '')
-            )
-            if (Object.keys(cleaned).length === 0) {
+            const updateData: Record<string, unknown> = {}
+            for (const [key, value] of Object.entries(data)) {
+              if (value !== undefined && value !== '') updateData[key] = value
+            }
+            // emails is a JSON field in the schema
+            if (email) updateData.emails = [email]
+
+            if (Object.keys(updateData).length === 0) {
               return { success: false, message: 'No hay campos para actualizar' }
             }
-            await prisma.place.update({ where: { id: placeId }, data: cleaned })
-            return { success: true, placeId, updated: Object.keys(cleaned) }
+            await prisma.place.update({ where: { id: placeId }, data: updateData })
+            return { success: true, placeId, updated: Object.keys(updateData) }
           } catch (err) {
             return { success: false, error: `Error al actualizar lugar: ${String(err)}` }
           }
@@ -342,11 +442,11 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
       }),
 
       setPriority: tool({
-        description: 'Establece la calificación de UN lugar: score (1-5) y temperatura (cold/warm/hot). Úsalo después de investigar y evaluar el potencial del negocio.',
+        description: 'Califica un lead con score (1-5) y temperatura (cold/warm/hot). Usala SIEMPRE despues de investigar un lugar. Si no tienes datos suficientes para decidir, asigna score 3 + warm y nota explicando que falta investigar mas.',
         inputSchema: z.object({
           placeId:          z.string().describe('ID del lugar'),
-          lead_score:       z.number().min(1).max(5).describe('1=no califica, 2=baja, 3=interesante, 4=buena oportunidad, 5=top'),
-          lead_temperature: z.enum(['cold', 'warm', 'hot']).describe('cold=sin potencial inmediato, warm=seguimiento moderado, hot=contactar urgente'),
+          lead_score:       z.number().min(1).max(5).describe('1=descartado, 2=bajo, 3=interesante, 4=buena oportunidad, 5=top oportunidad'),
+          lead_temperature: z.enum(['cold', 'warm', 'hot']).describe('cold=sin potencial inmediato, warm=seguimiento, hot=contactar ya'),
         }),
         execute: async ({ placeId, lead_score, lead_temperature }) => {
           try {
@@ -362,10 +462,10 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
       }),
 
       addNote: tool({
-        description: 'Añade una nota a un lugar, visible para todos los usuarios. Úsala para documentar investigaciones, hallazgos, fuentes consultadas y el razonamiento de la calificación asignada.',
+        description: 'Crea una nota en un lugar, visible para todo el equipo. Usala para: documentar investigaciones (con formato estructurado), redactar borradores de mensajes de acercamiento/outreach, registrar decisiones, dejar instrucciones para el equipo. Las notas son el historial de inteligencia del CRM — hacelas valiosas.',
         inputSchema: z.object({
           placeId: z.string().describe('ID del lugar'),
-          content: z.string().min(20).describe('Nota detallada: hallazgos, fuentes, datos encontrados, razonamiento de la prioridad'),
+          content: z.string().min(20).describe('Contenido de la nota. Para investigaciones usa el formato estructurado. Para outreach usa tono profesional y personalizado.'),
         }),
         execute: async ({ placeId, content }) => {
           try {
@@ -373,7 +473,7 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
               data: {
                 place_id: placeId,
                 user_id:  userId,
-                username,
+                username: `${username} (Atlas AI)`,
                 content,
               },
             })
@@ -384,13 +484,38 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
         },
       }),
 
-      // ── MASIVO ───────────────────────────────────────────────────────────────
-      bulkSetPriority: tool({
-        description: 'Actualiza el lead_score y/o lead_temperature de MÚLTIPLES lugares a la vez. Confirma con el usuario antes de ejecutar si son más de 10 lugares. Úsalo después de hacer searchPlaces para obtener los IDs.',
+      toggleFavorite: tool({
+        description: 'Marca o desmarca un lugar como favorito para el usuario actual. Usalo cuando el usuario diga "guardalo", "marcalo", "favorito" o cuando identifiques un prospecto excepcional (score 5, hot) y quieras sugerirlo.',
         inputSchema: z.object({
-          placeIds:         z.array(z.string()).min(1).max(200).describe('Lista de IDs de los lugares a actualizar'),
-          lead_score:       z.number().min(1).max(5).optional().describe('Nuevo lead score para todos los lugares'),
-          lead_temperature: z.enum(['cold', 'warm', 'hot']).optional().describe('Nueva temperatura para todos los lugares'),
+          placeId: z.string().describe('ID del lugar'),
+        }),
+        execute: async ({ placeId }) => {
+          try {
+            const existing = await prisma.placeFavorite.findUnique({
+              where: { place_id_user_id: { place_id: placeId, user_id: userId } },
+            })
+            if (existing) {
+              await prisma.placeFavorite.delete({ where: { id: existing.id } })
+              return { success: true, action: 'removed', placeId, message: 'Eliminado de favoritos' }
+            } else {
+              await prisma.placeFavorite.create({
+                data: { place_id: placeId, user_id: userId },
+              })
+              return { success: true, action: 'added', placeId, message: 'Añadido a favoritos' }
+            }
+          } catch (err) {
+            return { success: false, error: `Error al toggle favorito: ${String(err)}` }
+          }
+        },
+      }),
+
+      // ── OPERACIONES MASIVAS ──────────────────────────────────────────────────
+      bulkSetPriority: tool({
+        description: 'Actualiza score y/o temperatura de MULTIPLES lugares a la vez. Confirma con el usuario si son mas de 10. Usalo para: clasificar lotes nuevos, re-priorizar segmentos, limpiar registros sin evaluar.',
+        inputSchema: z.object({
+          placeIds:         z.array(z.string()).min(1).max(200).describe('IDs de los lugares a actualizar'),
+          lead_score:       z.number().min(1).max(5).optional().describe('Nuevo score para todos'),
+          lead_temperature: z.enum(['cold', 'warm', 'hot']).optional().describe('Nueva temperatura para todos'),
         }),
         execute: async ({ placeIds, lead_score, lead_temperature }) => {
           try {
@@ -406,24 +531,47 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
               where: { id: { in: placeIds } },
               data,
             })
-            return { success: true, updated: result.count, placeIds: placeIds.length }
+            return { success: true, updated: result.count, requested: placeIds.length }
           } catch (err) {
-            return { success: false, error: `Error en actualización masiva: ${String(err)}` }
+            return { success: false, error: `Error en actualizacion masiva: ${String(err)}` }
+          }
+        },
+      }),
+
+      bulkAddNote: tool({
+        description: 'Añade la misma nota a MULTIPLES lugares a la vez. Util para: documentar decisiones masivas ("Clasificado como cold por falta de datos"), registrar resultados de auditorias, o marcar lotes procesados.',
+        inputSchema: z.object({
+          placeIds: z.array(z.string()).min(1).max(100).describe('IDs de los lugares'),
+          content:  z.string().min(10).describe('Contenido de la nota a añadir a todos los lugares'),
+        }),
+        execute: async ({ placeIds, content }) => {
+          try {
+            const notes = await prisma.placeNote.createMany({
+              data: placeIds.map(place_id => ({
+                place_id,
+                user_id: userId,
+                username: `${username} (Atlas AI)`,
+                content,
+              })),
+            })
+            return { success: true, created: notes.count, placeIds: placeIds.length }
+          } catch (err) {
+            return { success: false, error: `Error al crear notas masivas: ${String(err)}` }
           }
         },
       }),
 
       // ── PROSPECTOS ────────────────────────────────────────────────────────────
       saveProspectList: tool({
-        description: 'Guarda una lista de prospectos seleccionados. Máximo 50 lugares por lista, cada uno con una razón específica. El nombre debe ser descriptivo.',
+        description: 'Guarda una lista curada de prospectos. Max 50 por lista. Cada prospecto DEBE tener una razon especifica y personalizada — nada generico. El nombre debe ser descriptivo y accionable.',
         inputSchema: z.object({
-          name:        z.string().min(1).describe('Nombre descriptivo, ej: "Top 50 Restaurantes Lima - Hot Leads"'),
-          description: z.string().optional().describe('Descripción de los criterios de selección usados'),
+          name:        z.string().min(1).describe('Nombre accionable, ej: "Top 30 Restaurantes Lima - Listos para contactar"'),
+          description: z.string().optional().describe('Criterios de seleccion, metodologia, y recomendacion de como abordar estos prospectos'),
           prospects:   z.array(z.object({
             placeId: z.string().describe('ID del lugar'),
-            rank:    z.number().optional().describe('Posición en el ranking'),
-            reason:  z.string().min(10).describe('Razón específica de por qué es un buen prospecto'),
-          })).max(50).describe('Lista de prospectos (máximo 50)'),
+            rank:    z.number().optional().describe('Posicion en el ranking'),
+            reason:  z.string().min(10).describe('Razon personalizada: por que ESTE negocio especificamente es buen prospecto'),
+          })).max(50).describe('Prospectos seleccionados (max 50)'),
         }),
         execute: async ({ name, description, prospects }) => {
           try {
@@ -455,7 +603,7 @@ Responde siempre en español. Sé conciso en el texto pero exhaustivo en las acc
       }),
 
       getProspectLists: tool({
-        description: 'Obtiene las listas de prospectos creadas anteriormente (últimas 10). Úsala para evitar duplicados o para referenciar trabajo previo.',
+        description: 'Obtiene las ultimas listas de prospectos creadas. Usala para: evitar duplicados, referenciar trabajo previo, o mostrar al usuario el historial de listas.',
         inputSchema: z.object({}),
         execute: async () => {
           try {

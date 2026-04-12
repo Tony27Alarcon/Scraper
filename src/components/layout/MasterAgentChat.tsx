@@ -6,18 +6,21 @@ import { usePathname } from 'next/navigation'
 import { DefaultChatTransport } from 'ai'
 import {
   Bot, Send, StopCircle, X, Loader2, RotateCcw,
-  BarChart2, Flame, Search, Star, Zap, FileText,
+  BarChart2, Flame, Search, Target, Zap, FileText,
+  TrendingUp, AlertCircle,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 
 const QUICK_PROMPTS = [
-  { icon: BarChart2, text: 'Dame un resumen estadístico del sistema' },
-  { icon: Flame,     text: 'Muéstrame los 10 leads más calientes (hot)' },
-  { icon: Search,    text: 'Busca lugares sin teléfono ni web para investigar' },
-  { icon: Star,      text: 'Crea una lista con los 20 mejores prospectos' },
-  { icon: Zap,       text: 'Califica como warm todos los lugares con rating > 4' },
-  { icon: FileText,  text: 'Investiga y completa la info del lugar que estoy viendo' },
+  { icon: BarChart2,  text: 'Dame un diagnóstico completo del CRM: estadísticas, gaps de datos y oportunidades que veas' },
+  { icon: Flame,      text: 'Muéstrame los leads hot que aún no tienen notas de investigación — son oportunidades sin trabajar' },
+  { icon: Search,     text: 'Encuentra los 10 negocios con mejor rating que no tienen teléfono ni web, e investiga los top 3' },
+  { icon: Target,     text: 'Investiga a fondo el lugar que estoy viendo: busca todo en internet, llena campos vacíos, califica y deja nota' },
+  { icon: TrendingUp, text: 'Crea una lista con los 30 mejores prospectos listos para contactar esta semana' },
+  { icon: Zap,        text: 'Busca los registros nuevos sin evaluar y clasifícalos con score y temperatura según los datos disponibles' },
+  { icon: FileText,   text: 'Redacta un mensaje de acercamiento profesional para el prospecto que estoy viendo' },
+  { icon: AlertCircle,text: 'Identifica registros duplicados o negocios cerrados y márcalos para limpieza' },
 ]
 
 export function MasterAgentChat() {
@@ -85,7 +88,7 @@ export function MasterAgentChat() {
         <div className="flex items-center justify-between px-4 py-3 bg-brand-600 text-white shrink-0">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
-            <span className="font-semibold text-sm">Agente Maestro</span>
+            <span className="font-semibold text-sm">Atlas — Analista de Inteligencia</span>
             {isLoading && (
               <span className="flex items-center gap-1 text-xs text-brand-200">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -239,7 +242,7 @@ export function MasterAgentChat() {
               ? 'bg-brand-700 hover:bg-brand-800'
               : 'bg-brand-600 hover:bg-brand-700',
           )}
-          title="Agente Maestro"
+          title="Atlas — Analista de Inteligencia"
         >
           {isOpen ? (
             <X   className="w-6 h-6 text-white" />

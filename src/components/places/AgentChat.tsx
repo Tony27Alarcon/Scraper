@@ -12,9 +12,10 @@ interface AgentChatProps {
 }
 
 const QUICK_PROMPTS = [
-  'Investiga este lugar en internet y completa la información que falte',
-  'Evalúa la prioridad de este lead y actualiza score y temperatura',
-  'Haz un resumen del lugar y añádelo como nota',
+  'Investiga este negocio a fondo: busca en internet, llena todos los campos vacíos, califica el lead y documenta todo en una nota',
+  'Evalúa el potencial de este prospecto y dame tu recomendación: ¿vale la pena contactarlo? ¿por qué?',
+  'Redacta un mensaje de acercamiento profesional personalizado para este negocio',
+  'Busca la web oficial y redes sociales de este negocio, extrae toda la info de contacto que encuentres',
 ]
 
 export function AgentChat({ placeId }: AgentChatProps) {
@@ -56,7 +57,7 @@ export function AgentChat({ placeId }: AgentChatProps) {
       >
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-brand-600" />
-          <span className="font-medium text-gray-900">Asistente IA</span>
+          <span className="font-medium text-gray-900">Scout — Investigador</span>
           {isLoading && (
             <span className="flex items-center gap-1 text-xs text-brand-600">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -77,7 +78,7 @@ export function AgentChat({ placeId }: AgentChatProps) {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="space-y-3">
-                <p className="text-sm text-gray-500 text-center">¿En qué puedo ayudarte con este lugar?</p>
+                <p className="text-sm text-gray-500 text-center">Scout investiga, enriquece y evalúa este prospecto</p>
                 <div className="flex flex-col gap-2">
                   {QUICK_PROMPTS.map((prompt) => (
                     <button

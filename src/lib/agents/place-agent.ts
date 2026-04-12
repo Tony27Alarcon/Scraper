@@ -25,13 +25,13 @@ interface CreatePlaceAgentOptions {
 
 function buildCompanySection(company?: CompanyProfile | null): string {
   if (!company) return ''
-  const lines = ['## Empresa (contextualiza tu análisis con este perfil)']
+  const lines = ['\n## Tu empresa (evalua todo desde esta perspectiva)']
   lines.push(`- **Nombre:** ${company.name}`)
   if (company.industry)    lines.push(`- **Industria / Nicho:** ${company.industry}`)
   if (company.website)     lines.push(`- **Sitio web:** ${company.website}`)
-  if (company.description) lines.push(`- **Descripción:** ${company.description}`)
-  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios\n${company.ai_context}`)
-  return '\n\n' + lines.join('\n')
+  if (company.description) lines.push(`- **Descripcion:** ${company.description}`)
+  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios del cliente\n${company.ai_context}`)
+  return lines.join('\n')
 }
 
 export function createPlaceAgent({ placeId, userId, username, company }: CreatePlaceAgentOptions) {
@@ -39,31 +39,112 @@ export function createPlaceAgent({ placeId, userId, username, company }: CreateP
 
   return new ToolLoopAgent({
     model: google('gemini-2.5-flash'),
-    stopWhen: stepCountIs(15),
-    instructions: `Eres un asistente especializado en investigación de leads y negocios locales.
-Tu tarea: investigar, enriquecer y calificar el lugar con ID: ${placeId}.${companySection}
+    stopWhen: stepCountIs(18),
+    instructions: `# Identidad
 
-## Proceso de investigación
-1. **getPlaceInfo** — Empieza siempre aquí para conocer el estado actual
-2. **searchWeb** — Busca por nombre + ciudad. Prueba queries distintas:
-   - "[nombre negocio] [ciudad] teléfono"
-   - "[nombre negocio] [ciudad] sitio web"
-   - "[nombre negocio] [ciudad] horarios contacto"
-3. **scrapePage** — Si encuentras una web oficial, redes sociales o Google Maps, extrae el contenido completo
-4. **updatePlace** — Actualiza todos los campos que hayas encontrado con datos confiables
-5. **setPriority** — Evalúa score (1-5) y temperatura (cold/warm/hot) según el potencial y criterios de la empresa
-6. **addNote** — Cierra siempre con una nota que resuma hallazgos, fuentes usadas y razonamiento de prioridad
+Eres **Scout**, Investigador de Inteligencia Comercial especializado en enriquecimiento y evaluacion profunda de prospectos. Tu trabajo es convertir un registro basico en un perfil comercial completo y accionable.
 
-## Reglas de calidad
-- Haz mínimo 2 búsquedas web con queries distintos
-- Siempre visita la web oficial si existe
-- Solo actualiza campos con datos verificados y confiables
-- La nota final debe ser detallada: qué encontraste, qué falta, por qué asignaste esa prioridad
+Tu objetivo con este lugar (ID: ${placeId}): investigarlo a fondo, llenar cada campo vacio posible, evaluar su potencial como prospecto, y dejar documentacion que permita al equipo de ventas actuar inmediatamente.
+${companySection}
 
-Responde siempre en español. Sé conciso en tus respuestas al usuario pero exhaustivo en la investigación.`,
+## Tu mentalidad
+
+**Eres un detective comercial.** No te conformas con el primer resultado de Google — cruzas fuentes, verificas datos, buscas en la web oficial, redes sociales, directorios y resenas. Si un dato no cuadra, lo señalas.
+
+**Eres un enriquecedor obsesivo.** Si un campo esta vacio y la informacion existe online, lo llenas. Telefono, email, web, descripcion, ciudad, pais, rango de precios — TODO lo que encuentres se actualiza.
+
+**Eres un evaluador critico.** No regalas scores altos. Un score 5 es para negocios excepcionales que cumplen todos los criterios. Justifica cada calificacion con datos concretos.
+
+**Eres un copywriter estrategico.** Cuando redactas notas o mensajes, piensas en quien los va a leer (el equipo de ventas) y que necesitan saber para actuar.
+
+## Proceso de investigacion — EJECUTA TODOS LOS PASOS
+
+No esperes instrucciones para cada paso. Cuando el usuario dice "investiga", ejecuta TODO:
+
+### Paso 1: Diagnostico inicial
+→ **getPlaceInfo** — Lee el estado actual. Identifica TODOS los campos vacios. Revisa notas previas para no repetir trabajo.
+
+### Paso 2: Investigacion web intensiva (MINIMO 2 busquedas)
+→ **searchWeb** con queries variados:
+  - "[nombre] [ciudad] telefono contacto email"
+  - "[nombre] [ciudad] sitio web oficial"
+  - "[nombre] [ciudad] resenas opiniones"
+  - "[nombre] [ciudad] [industria relevante]" (si aplica al perfil de empresa)
+
+### Paso 3: Extraccion profunda
+→ **scrapePage** en TODA web oficial, perfil de redes, o directorio que encuentres. No te conformes con snippets — extrae la pagina completa. Busca:
+  - Datos de contacto (telefono, email, formulario)
+  - Servicios/productos ofrecidos
+  - Rango de precios
+  - Señales de inversion (web profesional, reservas online, multiples ubicaciones)
+  - Informacion del dueño/equipo
+
+### Paso 4: Enriquecimiento total
+→ **updatePlace** con TODOS los datos encontrados en una sola llamada. No dejes nada sin actualizar.
+
+### Paso 5: Evaluacion y calificacion
+→ **setPriority** basado en estas 5 dimensiones:
+
+| Dimension | Score alto (4-5) | Score bajo (1-2) |
+|-----------|-----------------|-------------------|
+| Presencia digital | Web profesional, redes activas | Sin web, sin redes |
+| Reputacion | Rating 4.5+, 100+ resenas | Rating bajo, pocas resenas |
+| Contactabilidad | Telefono + email + web | Sin datos de contacto |
+| Señales de inversion | $$-$$$$, reservas online, local premium | $, basico, informal |
+| Fit con empresa | Encaja perfecto con el nicho | No es el tipo de cliente ideal |
+
+**Temperatura:**
+- **hot** = Score 4-5 + datos completos + fit alto → contactar AHORA
+- **warm** = Score 3-4 + datos parciales → investigar mas o hacer seguimiento
+- **cold** = Score 1-2 + mal fit o datos insuficientes → baja prioridad
+
+### Paso 6: Documentacion
+→ **addNote** con formato estructurado:
+
+---
+📋 **Investigacion: [Nombre]**
+📅 Fecha: [hoy]
+🔍 Fuentes consultadas: [URLs]
+
+**Hallazgos clave:**
+- [dato relevante 1]
+- [dato relevante 2]
+
+**Datos actualizados:**
+- [campo]: [valor anterior o "vacio"] → [nuevo valor]
+
+**Evaluacion (Score X/5 | Temperatura: X):**
+- Presencia digital: [evaluacion]
+- Reputacion: [evaluacion]
+- Contactabilidad: [evaluacion]
+- Señales de inversion: [evaluacion]
+- Fit con empresa: [evaluacion]
+
+**Proximos pasos recomendados:**
+- [accion concreta 1]
+- [accion concreta 2]
+---
+
+### Paso 7 (si aplica): Borrador de outreach
+Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de mensaje de acercamiento como nota adicional:
+- Personalizado con datos reales del negocio
+- Tono profesional pero cercano
+- Gancho basado en un pain point del sector
+- Propuesta de valor clara
+- Call-to-action especifico
+
+## Reglas operativas
+- NUNCA preguntes "quieres que investigue?" — HAZLO directamente
+- Minimo 2 busquedas web con queries distintos
+- SIEMPRE extrae la web oficial si existe
+- Solo actualiza con datos verificados de fuentes confiables
+- Si encuentras que el negocio cerro → actualiza status a "cerrado" y documentalo
+- Responde siempre en español
+- Se conciso en explicaciones pero exhaustivo en acciones`,
+
     tools: {
       getPlaceInfo: tool({
-        description: 'Obtiene la información actual del lugar desde la base de datos, incluyendo las últimas notas. Llama esto primero.',
+        description: 'Obtiene TODA la informacion actual del lugar desde la base de datos: contacto, ubicacion, CRM, notas previas y campos faltantes. SIEMPRE es tu primer paso — necesitas saber que datos ya existen y cuales faltan antes de investigar.',
         inputSchema: z.object({}),
         execute: async () => {
           try {
@@ -75,10 +156,32 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
                   take: 5,
                   select: { content: true, username: true, created_at: true },
                 },
+                _count: {
+                  select: { favorites: true, reactions: true, notes: true },
+                },
               },
             })
             if (!place) return { error: 'Lugar no encontrado en la base de datos' }
-            return place
+
+            return {
+              ...place,
+              review_rating: place.review_rating ? Number(place.review_rating) : null,
+              latitude:      place.latitude ? Number(place.latitude) : null,
+              longitude:     place.longitude ? Number(place.longitude) : null,
+              totalNotes:    place._count.notes,
+              totalFavorites: place._count.favorites,
+              camposFaltantes: [
+                !place.phone && 'phone',
+                !place.website && 'website',
+                !place.descriptions && 'descriptions',
+                !place.city && 'city',
+                !place.country && 'country',
+                !place.lead_score && 'lead_score',
+                !place.lead_temperature && 'lead_temperature',
+                !place.price_range && 'price_range',
+                !place.timezone && 'timezone',
+              ].filter(Boolean),
+            }
           } catch (err) {
             return { error: `Error al obtener lugar: ${String(err)}` }
           }
@@ -86,10 +189,10 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
       }),
 
       searchWeb: tool({
-        description: 'Busca información en internet sobre el lugar usando Firecrawl. Devuelve URLs, títulos y contenido relevante. Haz múltiples búsquedas con queries distintos para cubrir teléfono, web oficial, horarios y reseñas.',
+        description: 'Busca informacion en internet sobre el lugar. Haz MULTIPLES busquedas con queries diferentes para maximizar cobertura: una para contacto, otra para web oficial, otra para resenas/reputacion. No te limites a una sola busqueda.',
         inputSchema: z.object({
-          query: z.string().describe('Query de búsqueda específica. Ej: "Restaurante La Mar Miraflores Lima teléfono reservas"'),
-          limit: z.number().min(1).max(10).default(5).describe('Número máximo de resultados'),
+          query: z.string().describe('Query especifica y contextualizada. Incluye nombre + ciudad + lo que buscas.'),
+          limit: z.number().min(1).max(10).default(5).describe('Resultados maximos'),
         }),
         execute: async ({ query, limit }) => {
           try {
@@ -111,20 +214,20 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
                   url:         r.url ?? '',
                   title:       r.title ?? r.metadata?.title ?? '',
                   description: r.description ?? r.metadata?.description ?? '',
-                  content:     (r.markdown ?? '').slice(0, 1200),
+                  content:     (r.markdown ?? '').slice(0, 1500),
                 }
               }),
             }
           } catch (err) {
-            return { error: `Error en búsqueda web: ${String(err)}`, query, results: [] }
+            return { error: `Error en busqueda web: ${String(err)}`, query, results: [] }
           }
         },
       }),
 
       scrapePage: tool({
-        description: 'Extrae el contenido completo de una URL. Úsala en webs oficiales del negocio, Google Maps, TripAdvisor, redes sociales o cualquier fuente que tenga datos de contacto, horarios o descripción.',
+        description: 'Extrae contenido completo de una URL. SIEMPRE usala en la web oficial del negocio si la encuentras — ahi esta la mejor info de contacto, servicios y precios. Tambien util para redes sociales, Google Maps, directorios y paginas de resenas.',
         inputSchema: z.object({
-          url: z.string().url().describe('URL completa de la página a extraer'),
+          url: z.string().url().describe('URL de la pagina a extraer'),
         }),
         execute: async ({ url }) => {
           try {
@@ -134,33 +237,40 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
               url,
               title:       result.metadata?.title ?? '',
               description: result.metadata?.description ?? '',
-              content:     (result.markdown ?? '').slice(0, 4000),
+              content:     (result.markdown ?? '').slice(0, 5000),
             }
           } catch (err) {
-            return { error: `Error al extraer página: ${String(err)}`, url }
+            return { error: `Error al extraer pagina: ${String(err)}`, url }
           }
         },
       }),
 
       updatePlace: tool({
-        description: 'Actualiza campos del lugar con información verificada. Solo envía los campos que hayas confirmado con fuentes confiables.',
+        description: 'Actualiza campos del lugar con informacion verificada. Envia TODOS los datos encontrados en UNA sola llamada. No hagas llamadas separadas para cada campo — es ineficiente.',
         inputSchema: z.object({
-          descriptions: z.string().optional().describe('Descripción del negocio (qué hace, su especialidad)'),
-          phone:        z.string().optional().describe('Número de teléfono con código de país si es posible'),
+          descriptions: z.string().optional().describe('Descripcion del negocio: que ofrece, especialidad, publico'),
+          phone:        z.string().optional().describe('Telefono con codigo de pais (+51, +57, +34...)'),
           website:      z.string().url().optional().describe('URL del sitio web oficial'),
+          email:        z.string().email().optional().describe('Email de contacto del negocio'),
           price_range:  z.string().optional().describe('Rango de precios: $, $$, $$$ o $$$$'),
           timezone:     z.string().optional().describe('Zona horaria IANA, ej: America/Lima'),
+          city:         z.string().optional().describe('Ciudad del negocio'),
+          country:      z.string().optional().describe('Pais del negocio'),
+          status:       z.string().optional().describe('Estado: activo, cerrado, duplicado, no_verificado'),
         }),
-        execute: async (data) => {
+        execute: async ({ email, ...data }) => {
           try {
-            const cleaned = Object.fromEntries(
-              Object.entries(data).filter(([, v]) => v !== undefined && v !== '')
-            )
-            if (Object.keys(cleaned).length === 0) {
+            const updateData: Record<string, unknown> = {}
+            for (const [key, value] of Object.entries(data)) {
+              if (value !== undefined && value !== '') updateData[key] = value
+            }
+            if (email) updateData.emails = [email]
+
+            if (Object.keys(updateData).length === 0) {
               return { success: false, message: 'No hay campos para actualizar' }
             }
-            await prisma.place.update({ where: { id: placeId }, data: cleaned })
-            return { success: true, updated: Object.keys(cleaned) }
+            await prisma.place.update({ where: { id: placeId }, data: updateData })
+            return { success: true, updated: Object.keys(updateData) }
           } catch (err) {
             return { success: false, error: `Error al actualizar lugar: ${String(err)}` }
           }
@@ -168,13 +278,13 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
       }),
 
       setPriority: tool({
-        description: 'Establece la calificación del lead. Úsala después de investigar y evaluar el potencial del negocio según los criterios de la empresa.',
+        description: 'Califica el lead con score (1-5) y temperatura (cold/warm/hot). SIEMPRE usala despues de investigar. Justifica tu decision con datos — no califiques sin evidencia.',
         inputSchema: z.object({
           lead_score: z.number().min(1).max(5).describe(
-            'Puntuación 1-5: 1=no califica, 2=baja prioridad, 3=interesante, 4=buena oportunidad, 5=oportunidad top'
+            '1=descartado, 2=bajo, 3=interesante, 4=buena oportunidad, 5=top oportunidad'
           ),
           lead_temperature: z.enum(['cold', 'warm', 'hot']).describe(
-            'Temperatura: cold=sin potencial inmediato, warm=seguimiento moderado, hot=contactar urgente'
+            'cold=sin potencial inmediato, warm=seguimiento, hot=contactar urgente'
           ),
         }),
         execute: async ({ lead_score, lead_temperature }) => {
@@ -191,9 +301,9 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
       }),
 
       addNote: tool({
-        description: 'Añade una nota al lugar visible para todos los usuarios. Siempre termina la investigación con una nota que resuma los hallazgos, fuentes consultadas y justificación de la prioridad asignada.',
+        description: 'Crea una nota visible para todo el equipo. Usala para: documentar investigaciones (formato estructurado), redactar borradores de outreach/pitch personalizados, registrar decisiones, o dejar instrucciones. Las notas son el historial de inteligencia — hacelas valiosas y accionables.',
         inputSchema: z.object({
-          content: z.string().min(20).describe('Nota detallada: hallazgos, fuentes, datos de contacto encontrados, evaluación del potencial y razonamiento de la prioridad'),
+          content: z.string().min(20).describe('Contenido de la nota. Para investigaciones: formato estructurado con hallazgos, fuentes y evaluacion. Para outreach: mensaje personalizado con gancho y CTA.'),
         }),
         execute: async ({ content }) => {
           try {
@@ -201,13 +311,36 @@ Responde siempre en español. Sé conciso en tus respuestas al usuario pero exha
               data: {
                 place_id: placeId,
                 user_id:  userId,
-                username,
+                username: `${username} (Scout AI)`,
                 content,
               },
             })
             return { success: true, noteId: note.id }
           } catch (err) {
             return { success: false, error: `Error al crear nota: ${String(err)}` }
+          }
+        },
+      }),
+
+      toggleFavorite: tool({
+        description: 'Marca o desmarca este lugar como favorito. Usalo cuando: el usuario lo pida, o cuando identifiques un prospecto excepcional (score 5, hot) para sugerir marcarlo.',
+        inputSchema: z.object({}),
+        execute: async () => {
+          try {
+            const existing = await prisma.placeFavorite.findUnique({
+              where: { place_id_user_id: { place_id: placeId, user_id: userId } },
+            })
+            if (existing) {
+              await prisma.placeFavorite.delete({ where: { id: existing.id } })
+              return { success: true, action: 'removed', message: 'Eliminado de favoritos' }
+            } else {
+              await prisma.placeFavorite.create({
+                data: { place_id: placeId, user_id: userId },
+              })
+              return { success: true, action: 'added', message: 'Añadido a favoritos' }
+            }
+          } catch (err) {
+            return { success: false, error: `Error al toggle favorito: ${String(err)}` }
           }
         },
       }),
