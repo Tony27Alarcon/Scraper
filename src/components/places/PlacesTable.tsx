@@ -12,6 +12,7 @@ import { formatRating, truncate, cn } from '@/lib/utils'
 import { FavoriteButton }   from '@/components/crm/FavoriteButton'
 import { TemperatureBadge } from '@/components/crm/TemperatureBadge'
 import { LeadScore }        from '@/components/crm/LeadScore'
+import { AgentQuickActions } from '@/components/places/AgentQuickActions'
 
 interface PlacesTableProps {
   data:          Partial<Place>[]
