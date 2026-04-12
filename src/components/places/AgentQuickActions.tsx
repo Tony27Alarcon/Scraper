@@ -53,8 +53,12 @@ export function AgentQuickActions({ placeId }: AgentQuickActionsProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ id: Date.now().toString(), role: 'user', content: prompt }]
-        })
+          messages: [{
+            id:   Date.now().toString(),
+            role: 'user',
+            parts: [{ type: 'text', text: prompt }],
+          }],
+        }),
       })
       
       if (!res.ok) throw new Error('Error en la petición')
