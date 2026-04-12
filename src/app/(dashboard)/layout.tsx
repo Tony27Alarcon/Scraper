@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
+import { MasterAgentChat } from '@/components/layout/MasterAgentChat'
 
 export default async function DashboardLayout({
   children,
@@ -21,6 +22,7 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+      <MasterAgentChat />
     </div>
   )
 }

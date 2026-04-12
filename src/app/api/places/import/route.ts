@@ -9,7 +9,7 @@ const SCALAR_FIELDS = [
   'input_id', 'link', 'title', 'category', 'address', 'phone', 'website',
   'plus_code', 'review_count', 'review_rating', 'latitude', 'longitude',
   'cid', 'status', 'descriptions', 'reviews_link', 'thumbnail', 'timezone',
-  'price_range', 'data_id', 'place_id', 'batch_tag',
+  'price_range', 'data_id', 'place_id', 'batch_tag', 'city', 'country',
 ]
 
 function parseJsonField(raw: string | undefined): { value: unknown; error: string | null } {

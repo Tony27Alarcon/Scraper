@@ -54,6 +54,8 @@ export const CreateSchema = z.object({
   user_reviews_extended: z.any().optional(),
   emails:                z.any().optional(),
   batch_tag:             z.string().optional(),
+  city:                  z.string().optional(),
+  country:               z.string().optional(),
 })
 
 export type CreateInput = z.infer<typeof CreateSchema>

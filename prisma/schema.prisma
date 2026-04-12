@@ -113,6 +113,8 @@ model Place {
   user_reviews_extended Json?
   emails                Json?
   batch_tag             String?
+  city                  String?
+  country               String?
   lead_score            Int?
   lead_temperature      String?
   created_at            DateTime @default(now())

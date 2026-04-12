@@ -8,10 +8,14 @@ import { cn } from '@/lib/utils'
 interface PlaceFiltersProps {
   categories:          string[]
   batchTags:           string[]
+  cities:              string[]
+  countries:           string[]
   prospectLists:       { id: string; name: string }[]
   currentSearch:       string
   currentCategory:     string
   currentBatchTag:     string
+  currentCity:         string
+  currentCountry:      string
   currentTemperature:  string
   currentFavorites:    boolean
   currentMinRating:    string
@@ -40,8 +44,8 @@ const TEMP_OPTIONS = [
 ]
 
 export function PlaceFilters({
-  categories, batchTags, prospectLists,
-  currentSearch, currentCategory, currentBatchTag,
+  categories, batchTags, cities, countries, prospectLists,
+  currentSearch, currentCategory, currentBatchTag, currentCity, currentCountry,
   currentTemperature, currentFavorites, currentMinRating, currentMinScore,
   currentSort, currentOrder, currentProspectList,
   coldCount, warmCount, hotCount,
@@ -75,6 +79,7 @@ export function PlaceFilters({
 
   const hasFilters = !!(
     currentSearch || currentCategory || currentBatchTag ||
+    currentCity || currentCountry ||
     currentTemperature || currentFavorites || currentMinRating ||
     currentMinScore || currentSort !== 'recent' || currentProspectList
   )
@@ -191,6 +196,32 @@ export function PlaceFilters({
             <option value="">Todas las cargas</option>
             {batchTags.map((tag) => (
               <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
+        )}
+
+        {countries.length > 0 && (
+          <select
+            value={currentCountry}
+            onChange={(e) => push({ country: e.target.value })}
+            className="input-field w-auto min-w-[155px]"
+          >
+            <option value="">Todos los países</option>
+            {countries.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
+
+        {cities.length > 0 && (
+          <select
+            value={currentCity}
+            onChange={(e) => push({ city: e.target.value })}
+            className="input-field w-auto min-w-[155px]"
+          >
+            <option value="">Todas las ciudades</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         )}
@@ -320,6 +351,12 @@ export function PlaceFilters({
           )}
           {currentBatchTag && (
             <FilterChip label={`Carga: ${currentBatchTag}`} onRemove={() => push({ batch_tag: '' })} />
+          )}
+          {currentCountry && (
+            <FilterChip label={`País: ${currentCountry}`} onRemove={() => push({ country: '' })} />
+          )}
+          {currentCity && (
+            <FilterChip label={`Ciudad: ${currentCity}`} onRemove={() => push({ city: '' })} />
           )}
           {currentTemperature && (
             <FilterChip

@@ -100,8 +100,10 @@ Responde siempre en español. Al terminar, indica cuántos prospectos selecciona
           hasPhone:    z.boolean().optional().describe('Solo lugares con teléfono'),
           category:    z.string().optional().describe('Filtrar por categoría de negocio (búsqueda parcial)'),
           batchTag:    z.string().optional().describe('Filtrar por lote de importación'),
+          city:        z.string().optional().describe('Filtrar por ciudad (búsqueda exacta)'),
+          country:     z.string().optional().describe('Filtrar por país (búsqueda exacta)'),
         }),
-        execute: async ({ limit, temperature, minScore, hasWebsite, hasPhone, category, batchTag }) => {
+        execute: async ({ limit, temperature, minScore, hasWebsite, hasPhone, category, batchTag, city, country }) => {
           try {
             const where: Prisma.PlaceWhereInput = {}
             if (temperature)           where.lead_temperature = temperature
@@ -110,6 +112,8 @@ Responde siempre en español. Al terminar, indica cuántos prospectos selecciona
             if (hasPhone)              where.phone             = { not: null }
             if (category)              where.category          = { contains: category, mode: 'insensitive' }
             if (batchTag)              where.batch_tag         = batchTag
+            if (city)                  where.city              = { equals: city, mode: 'insensitive' }
+            if (country)               where.country           = { equals: country, mode: 'insensitive' }
 
             const places = await prisma.place.findMany({
               where,

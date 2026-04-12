@@ -14,6 +14,8 @@ interface SearchParams {
   search?:        string
   category?:      string
   batch_tag?:     string
+  city?:          string
+  country?:       string
   temperature?:   string
   favorites?:     string
   min_rating?:    string
@@ -28,6 +30,8 @@ async function getPlaces(params: SearchParams, userId: number) {
   const search       = params.search        ?? ''
   const category     = params.category      ?? ''
   const batchTag     = params.batch_tag     ?? ''
+  const city         = params.city          ?? ''
+  const country      = params.country       ?? ''
   const temperature  = params.temperature   ?? ''
   const favorites    = params.favorites     === 'true'
   const minRating    = parseFloat(params.min_rating ?? '')
@@ -48,6 +52,8 @@ async function getPlaces(params: SearchParams, userId: number) {
   }
   if (category)          whereBase.category      = { equals: category, mode: 'insensitive' }
   if (batchTag)          whereBase.batch_tag     = { equals: batchTag, mode: 'insensitive' }
+  if (city)              whereBase.city          = { equals: city, mode: 'insensitive' }
+  if (country)           whereBase.country       = { equals: country, mode: 'insensitive' }
   if (favorites)         whereBase.favorites     = { some: { user_id: userId } }
   if (!isNaN(minRating)) whereBase.review_rating  = { gte: minRating }
   if (!isNaN(minScore))  whereBase.lead_score     = { gte: minScore }
@@ -64,7 +70,7 @@ async function getPlaces(params: SearchParams, userId: number) {
   if (sort === 'score')   orderBy = { lead_score:    order }
   if (sort === 'title')   orderBy = { title:         order }
 
-  const [raw, total, allCategories, allBatchTags, tempGroups, prospectLists] = await Promise.all([
+  const [raw, total, allCategories, allBatchTags, allCities, allCountries, tempGroups, prospectLists] = await Promise.all([
     prisma.place.findMany({
       where,
       skip:    (page - 1) * PAGE_SIZE,
@@ -103,6 +109,18 @@ async function getPlaces(params: SearchParams, userId: number) {
       where:    { batch_tag: { not: null } },
       orderBy:  { batch_tag: 'asc' },
     }),
+    prisma.place.findMany({
+      select:   { city: true },
+      distinct: ['city'],
+      where:    { city: { not: null } },
+      orderBy:  { city: 'asc' },
+    }),
+    prisma.place.findMany({
+      select:   { country: true },
+      distinct: ['country'],
+      where:    { country: { not: null } },
+      orderBy:  { country: 'asc' },
+    }),
     // Count by temperature using the base where (without temp filter)
     prisma.place.groupBy({
       by:    ['lead_temperature'],
@@ -122,6 +140,8 @@ async function getPlaces(params: SearchParams, userId: number) {
 
   const categories = allCategories.map(c => c.category).filter(Boolean) as string[]
   const batchTags  = allBatchTags.map(b => b.batch_tag).filter(Boolean) as string[]
+  const cities     = allCities.map(c => c.city).filter(Boolean) as string[]
+  const countries  = allCountries.map(c => c.country).filter(Boolean) as string[]
 
   const coldCount = tempGroups.find(t => t.lead_temperature === 'cold')?._count._all ?? 0
   const warmCount = tempGroups.find(t => t.lead_temperature === 'warm')?._count._all ?? 0
@@ -130,7 +150,7 @@ async function getPlaces(params: SearchParams, userId: number) {
   return {
     data, total, page,
     totalPages: Math.ceil(total / PAGE_SIZE),
-    categories, batchTags, prospectLists,
+    categories, batchTags, cities, countries, prospectLists,
     coldCount, warmCount, hotCount,
   }
 }
@@ -167,10 +187,14 @@ export default async function PlacesPage({
       <PlaceFilters
         categories={result.categories}
         batchTags={result.batchTags}
+        cities={result.cities}
+        countries={result.countries}
         prospectLists={result.prospectLists}
         currentSearch={searchParams.search        ?? ''}
         currentCategory={searchParams.category    ?? ''}
         currentBatchTag={searchParams.batch_tag   ?? ''}
+        currentCity={searchParams.city            ?? ''}
+        currentCountry={searchParams.country      ?? ''}
         currentTemperature={searchParams.temperature ?? ''}
         currentFavorites={searchParams.favorites  === 'true'}
         currentMinRating={searchParams.min_rating ?? ''}
