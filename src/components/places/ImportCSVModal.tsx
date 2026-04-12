@@ -28,11 +28,13 @@ interface ImportCSVModalProps {
 export function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSVModalProps) {
   const [state,    setState]    = useState<UploadState>('idle')
   const [file,     setFile]     = useState<File | null>(null)
+  const [batchTag, setBatchTag] = useState('')
   const [result,   setResult]   = useState<ImportResult | null>(null)
   const [apiError, setApiError] = useState('')
 
   function handleClose() {
     setFile(null)
+    setBatchTag('')
     setResult(null)
     setApiError('')
     setState('idle')
@@ -61,6 +63,7 @@ export function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSVModalPro
     try {
       const form = new FormData()
       form.append('file', file)
+      if (batchTag.trim()) form.append('batch_tag', batchTag.trim())
 
       const res  = await fetch('/api/places/import', { method: 'POST', body: form })
       const json = await res.json()
@@ -109,6 +112,21 @@ export function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSVModalPro
 
         {/* Body */}
         <div className="p-5 space-y-4">
+          {/* Batch tag */}
+          <div>
+            <label className="label">Etiqueta de carga</label>
+            <input
+              type="text"
+              value={batchTag}
+              onChange={(e) => setBatchTag(e.target.value)}
+              placeholder="Ej: lote-2024-01, campaña-norte"
+              className="input-field"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Identificador para filtrar este bloque después de la importación.
+            </p>
+          </div>
+
           {/* File input */}
           <div>
             <label className="label">Archivo CSV</label>

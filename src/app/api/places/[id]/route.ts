@@ -52,6 +52,7 @@ const UpdateSchema = z.object({
   user_reviews:          z.any().optional(),
   user_reviews_extended: z.any().optional(),
   emails:                z.any().optional(),
+  batch_tag:             z.string().optional(),
 })
 
 export async function PUT(

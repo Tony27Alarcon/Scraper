@@ -6,11 +6,13 @@ import { Search, X } from 'lucide-react'
 
 interface PlaceFiltersProps {
   categories:      string[]
+  batchTags:       string[]
   currentSearch:   string
   currentCategory: string
+  currentBatchTag: string
 }
 
-export function PlaceFilters({ categories, currentSearch, currentCategory }: PlaceFiltersProps) {
+export function PlaceFilters({ categories, batchTags, currentSearch, currentCategory, currentBatchTag }: PlaceFiltersProps) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
@@ -36,11 +38,15 @@ export function PlaceFilters({ categories, currentSearch, currentCategory }: Pla
     router.push(`${pathname}?${createQueryString({ category: value })}`)
   }
 
+  function handleBatchTag(value: string) {
+    router.push(`${pathname}?${createQueryString({ batch_tag: value })}`)
+  }
+
   function clearFilters() {
     router.push(pathname)
   }
 
-  const hasFilters = currentSearch || currentCategory
+  const hasFilters = currentSearch || currentCategory || currentBatchTag
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -70,6 +76,20 @@ export function PlaceFilters({ categories, currentSearch, currentCategory }: Pla
           <option key={cat} value={cat}>{cat}</option>
         ))}
       </select>
+
+      {/* Batch tag */}
+      {batchTags.length > 0 && (
+        <select
+          value={currentBatchTag}
+          onChange={(e) => handleBatchTag(e.target.value)}
+          className="input-field w-auto min-w-[160px]"
+        >
+          <option value="">Todas las cargas</option>
+          {batchTags.map((tag) => (
+            <option key={tag} value={tag}>{tag}</option>
+          ))}
+        </select>
+      )}
 
       {/* Clear */}
       {hasFilters && (

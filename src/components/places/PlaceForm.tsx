@@ -45,6 +45,7 @@ const PlaceSchema = z.object({
   user_reviews_str:          z.string().optional(),
   user_reviews_extended_str: z.string().optional(),
   emails_str:                z.string().optional(),
+  batch_tag:                 z.string().optional(),
 })
 
 type PlaceFormData = z.infer<typeof PlaceSchema>
@@ -108,6 +109,7 @@ export function PlaceForm({ mode, place }: PlaceFormProps) {
       user_reviews_str:          toJsonStr(place.user_reviews),
       user_reviews_extended_str: toJsonStr(place.user_reviews_extended),
       emails_str:                toJsonStr(place.emails),
+      batch_tag:                 place.batch_tag   ?? '',
     } : {},
   })
 
@@ -243,6 +245,7 @@ export function PlaceForm({ mode, place }: PlaceFormProps) {
           </div>
           <Field label="Miniatura (URL)" name="thumbnail" placeholder="https://..." />
           <Field label="Link"            name="link"      placeholder="https://..." />
+          <Field label="Etiqueta de carga" name="batch_tag" placeholder="Ej: lote-2024-01, campaña-norte" />
         </div>
       </Section>
 

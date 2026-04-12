@@ -9,7 +9,7 @@ const SCALAR_FIELDS = [
   'input_id', 'link', 'title', 'category', 'address', 'phone', 'website',
   'plus_code', 'review_count', 'review_rating', 'latitude', 'longitude',
   'cid', 'status', 'descriptions', 'reviews_link', 'thumbnail', 'timezone',
-  'price_range', 'data_id', 'place_id',
+  'price_range', 'data_id', 'place_id', 'batch_tag',
 ]
 
 function parseJsonField(raw: string | undefined): { value: unknown; error: string | null } {
@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
   }
 
+  const batchTag = (formData.get('batch_tag') as string | null)?.trim() || undefined
+
   const fileName = (file as File).name ?? ''
   if (!fileName.endsWith('.csv')) {
     return NextResponse.json({ error: 'Solo se aceptan archivos .csv' }, { status: 400 })
@@ -64,6 +66,9 @@ export async function POST(req: NextRequest) {
       const v = raw[field]
       if (v !== undefined && v !== '') payload[field] = v
     }
+
+    // batch_tag del formulario sobreescribe el del CSV (si se envió uno)
+    if (batchTag) payload['batch_tag'] = batchTag
 
     let hasJsonError = false
     for (const field of JSON_FIELDS) {
@@ -94,16 +99,29 @@ export async function POST(req: NextRequest) {
   let skipped = 0
 
   if (toInsert.length > 0) {
-    const CHUNK_SIZE = 500
     try {
-      for (let start = 0; start < toInsert.length; start += CHUNK_SIZE) {
-        const chunk = toInsert.slice(start, start + CHUNK_SIZE)
-        const result = await prisma.place.createMany({
-          data: chunk as any,
-          skipDuplicates: true,
-        })
+      // Separar registros con y sin place_id
+      const withPlaceId    = toInsert.filter((r: any) => r.place_id)
+      const withoutPlaceId = toInsert.filter((r: any) => !r.place_id)
+
+      // Buscar cuáles place_ids ya existen para omitirlos
+      const existingIds = new Set(
+        (await prisma.place.findMany({
+          where: { place_id: { in: withPlaceId.map((r: any) => r.place_id) } },
+          select: { place_id: true },
+        })).map(r => r.place_id)
+      )
+
+      const newRecords = withPlaceId.filter((r: any) => !existingIds.has(r.place_id))
+      skipped += withPlaceId.length - newRecords.length
+
+      // Insertar en chunks los registros nuevos
+      const CHUNK_SIZE = 500
+      const toCreate = [...newRecords, ...withoutPlaceId]
+      for (let start = 0; start < toCreate.length; start += CHUNK_SIZE) {
+        const chunk = toCreate.slice(start, start + CHUNK_SIZE)
+        const result = await prisma.place.createMany({ data: chunk as any })
         imported += result.count
-        skipped  += chunk.length - result.count
       }
     } catch {
       return NextResponse.json({ error: 'Error al guardar en base de datos' }, { status: 500 })

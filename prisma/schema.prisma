@@ -20,6 +20,10 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
+  favorites PlaceFavorite[]
+  reactions PlaceReaction[]
+  notes     PlaceNote[]
+
   @@map("users")
   @@schema("scraper")
 }
@@ -60,9 +64,58 @@ model Place {
   user_reviews          Json?
   user_reviews_extended Json?
   emails                Json?
+  batch_tag             String?
+  lead_score            Int?
+  lead_temperature      String?
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
+  favorites PlaceFavorite[]
+  reactions PlaceReaction[]
+  notes     PlaceNote[]
+
   @@map("places")
+  @@schema("scraper")
+}
+
+model PlaceFavorite {
+  id         Int      @id @default(autoincrement())
+  place      Place    @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  place_id   String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    Int
+  created_at DateTime @default(now())
+
+  @@unique([place_id, user_id])
+  @@map("place_favorites")
+  @@schema("scraper")
+}
+
+model PlaceReaction {
+  id         Int      @id @default(autoincrement())
+  place      Place    @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  place_id   String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    Int
+  emoji      String
+  created_at DateTime @default(now())
+
+  @@unique([place_id, user_id, emoji])
+  @@map("place_reactions")
+  @@schema("scraper")
+}
+
+model PlaceNote {
+  id         Int      @id @default(autoincrement())
+  place      Place    @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  place_id   String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    Int
+  username   String?
+  content    String   @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("place_notes")
   @@schema("scraper")
 }

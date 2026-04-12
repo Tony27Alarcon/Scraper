@@ -6,16 +6,20 @@ import Link from 'next/link'
 import { Eye, Pencil, Trash2, Star, ChevronLeft, ChevronRight, Globe, Phone } from 'lucide-react'
 import { Place } from '@/types/place'
 import { formatRating, truncate, cn } from '@/lib/utils'
+import { FavoriteButton }   from '@/components/crm/FavoriteButton'
+import { TemperatureBadge } from '@/components/crm/TemperatureBadge'
+import { LeadScore }        from '@/components/crm/LeadScore'
 
 interface PlacesTableProps {
-  data:       Partial<Place>[]
-  total:      number
-  page:       number
-  totalPages: number
-  isAdmin:    boolean
+  data:          Partial<Place>[]
+  total:         number
+  page:          number
+  totalPages:    number
+  isAdmin:       boolean
+  currentUserId: number
 }
 
-export function PlacesTable({ data, total, page, totalPages, isAdmin }: PlacesTableProps) {
+export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUserId }: PlacesTableProps) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
@@ -51,7 +55,7 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin }: PlacesTa
               <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Categoría</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">Contacto</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Rating</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Estado</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Lead</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Acciones</th>
             </tr>
           </thead>
@@ -64,7 +68,7 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin }: PlacesTa
               </tr>
             ) : (
               data.map((place) => (
-                <tr key={place.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={place.id} className="hover:bg-gray-50/70 transition-colors">
                   {/* Nombre + dirección */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -133,16 +137,25 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin }: PlacesTa
                     )}
                   </td>
 
-                  {/* Estado */}
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className={cn(
-                      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                      place.status
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
-                    )}>
-                      {place.status ?? 'N/A'}
-                    </span>
+                  {/* Lead CRM */}
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <div className="flex items-center gap-1.5">
+                      <FavoriteButton
+                        placeId={place.id!}
+                        initialFavorited={place.isFavorited ?? false}
+                        size="sm"
+                      />
+                      <TemperatureBadge
+                        placeId={place.id!}
+                        initialTemp={place.lead_temperature}
+                        size="sm"
+                      />
+                      <LeadScore
+                        placeId={place.id!}
+                        initialScore={place.lead_score}
+                        size="sm"
+                      />
+                    </div>
                   </td>
 
                   {/* Acciones */}
@@ -199,10 +212,10 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin }: PlacesTa
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let p: number
-              if (totalPages <= 5) p = i + 1
-              else if (page <= 3) p = i + 1
+              if (totalPages <= 5)        p = i + 1
+              else if (page <= 3)         p = i + 1
               else if (page >= totalPages - 2) p = totalPages - 4 + i
-              else p = page - 2 + i
+              else                        p = page - 2 + i
               return (
                 <button
                   key={p}

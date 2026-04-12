@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const { searchParams } = req.nextUrl
-  const page     = Math.max(1, Number(searchParams.get('page') ?? 1))
-  const search   = searchParams.get('search')   ?? ''
-  const category = searchParams.get('category') ?? ''
+  const page      = Math.max(1, Number(searchParams.get('page') ?? 1))
+  const search    = searchParams.get('search')    ?? ''
+  const category  = searchParams.get('category')  ?? ''
+  const batchTag  = searchParams.get('batch_tag') ?? ''
 
   const where: any = {}
   if (search) {
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
       { category: { contains: search, mode: 'insensitive' } },
     ]
   }
-  if (category) where.category = { equals: category, mode: 'insensitive' }
+  if (category) where.category  = { equals: category,  mode: 'insensitive' }
+  if (batchTag) where.batch_tag = { equals: batchTag,  mode: 'insensitive' }
 
   const [data, total] = await Promise.all([
     prisma.place.findMany({
@@ -51,6 +53,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Datos inválidos', details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const place = await prisma.place.create({ data: parsed.data as any })
-  return NextResponse.json(place, { status: 201 })
+  try {
+    const place = await prisma.place.create({ data: parsed.data as any })
+    return NextResponse.json(place, { status: 201 })
+  } catch (e: any) {
+    if (e?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Ya existe un lugar con ese place_id' },
+        { status: 409 }
+      )
+    }
+    throw e
+  }
 }

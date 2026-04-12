@@ -10,15 +10,17 @@ import { authOptions } from '@/lib/auth'
 const PAGE_SIZE = 20
 
 interface SearchParams {
-  page?:     string
-  search?:   string
-  category?: string
+  page?:      string
+  search?:    string
+  category?:  string
+  batch_tag?: string
 }
 
-async function getPlaces(params: SearchParams) {
+async function getPlaces(params: SearchParams, userId: number) {
   const page     = Math.max(1, Number(params.page ?? 1))
-  const search   = params.search   ?? ''
-  const category = params.category ?? ''
+  const search   = params.search    ?? ''
+  const category = params.category  ?? ''
+  const batchTag = params.batch_tag ?? ''
 
   const where: any = {}
   if (search) {
@@ -32,47 +34,60 @@ async function getPlaces(params: SearchParams) {
   if (category) {
     where.category = { equals: category, mode: 'insensitive' }
   }
+  if (batchTag) {
+    where.batch_tag = { equals: batchTag, mode: 'insensitive' }
+  }
 
-  const [data, total, allCategories] = await Promise.all([
+  const [raw, total, allCategories, allBatchTags] = await Promise.all([
     prisma.place.findMany({
       where,
       skip:    (page - 1) * PAGE_SIZE,
       take:    PAGE_SIZE,
       orderBy: { created_at: 'desc' },
       select: {
-        id:            true,
-        title:         true,
-        category:      true,
-        address:       true,
-        phone:         true,
-        review_rating: true,
-        review_count:  true,
-        status:        true,
-        thumbnail:     true,
-        website:       true,
-        created_at:    true,
+        id:               true,
+        title:            true,
+        category:         true,
+        address:          true,
+        phone:            true,
+        review_rating:    true,
+        review_count:     true,
+        status:           true,
+        thumbnail:        true,
+        website:          true,
+        created_at:       true,
+        lead_score:       true,
+        lead_temperature: true,
+        favorites: {
+          where:  { user_id: userId },
+          select: { id: true },
+        },
       },
     }),
     prisma.place.count({ where }),
     prisma.place.findMany({
-      select: { category: true },
+      select:   { category: true },
       distinct: ['category'],
-      where: { category: { not: null } },
-      orderBy: { category: 'asc' },
+      where:    { category: { not: null } },
+      orderBy:  { category: 'asc' },
+    }),
+    prisma.place.findMany({
+      select:   { batch_tag: true },
+      distinct: ['batch_tag'],
+      where:    { batch_tag: { not: null } },
+      orderBy:  { batch_tag: 'asc' },
     }),
   ])
 
-  const categories = allCategories
-    .map((c) => c.category)
-    .filter(Boolean) as string[]
+  const data = raw.map(({ favorites, ...p }) => ({
+    ...p,
+    isFavorited: favorites.length > 0,
+  }))
 
-  return {
-    data,
-    total,
-    page,
-    totalPages: Math.ceil(total / PAGE_SIZE),
-    categories,
-  }
+  const categories = allCategories.map(c => c.category).filter(Boolean) as string[]
+  const batchTags  = allBatchTags.map(b => b.batch_tag).filter(Boolean) as string[]
+
+  return { data, total, page, totalPages: Math.ceil(total / PAGE_SIZE), categories, batchTags }
 }
 
 export default async function PlacesPage({
@@ -81,7 +96,8 @@ export default async function PlacesPage({
   searchParams: SearchParams
 }) {
   const session = await getServerSession(authOptions)
-  const result  = await getPlaces(searchParams)
+  const userId  = parseInt(session?.user?.id ?? '0')
+  const result  = await getPlaces(searchParams, userId)
 
   return (
     <div className="space-y-5">
@@ -105,8 +121,10 @@ export default async function PlacesPage({
 
       <PlaceFilters
         categories={result.categories}
+        batchTags={result.batchTags}
         currentSearch={searchParams.search ?? ''}
         currentCategory={searchParams.category ?? ''}
+        currentBatchTag={searchParams.batch_tag ?? ''}
       />
 
       <PlacesTable
@@ -115,6 +133,7 @@ export default async function PlacesPage({
         page={result.page}
         totalPages={result.totalPages}
         isAdmin={session?.user?.role === 'admin'}
+        currentUserId={userId}
       />
     </div>
   )

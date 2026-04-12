@@ -66,8 +66,23 @@ export interface Place {
   user_reviews?:         UserReview[] | null
   user_reviews_extended?: any | null
   emails?:               string[] | any | null
+  batch_tag?:            string | null
+  lead_score?:           number | null
+  lead_temperature?:     string | null
+  isFavorited?:          boolean
+  reactionCounts?:       { emoji: string; count: number; reacted: boolean }[]
   created_at:            string | Date
   updated_at:            string | Date
+}
+
+export interface PlaceNote {
+  id:         number
+  place_id:   string
+  user_id:    number
+  username?:  string | null
+  content:    string
+  created_at: string | Date
+  updated_at: string | Date
 }
 
 export interface PlacesResponse {
