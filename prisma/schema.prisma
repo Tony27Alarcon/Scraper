@@ -38,11 +38,41 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  favorites PlaceFavorite[]
-  reactions PlaceReaction[]
-  notes     PlaceNote[]
+  favorites     PlaceFavorite[]
+  reactions     PlaceReaction[]
+  notes         PlaceNote[]
+  prospectLists ProspectList[]
 
   @@map("users")
+  @@schema("scraper")
+}
+
+model ProspectList {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  created_by  Int
+  created_at  DateTime @default(now())
+
+  user  User               @relation(fields: [created_by], references: [id])
+  items ProspectListItem[]
+
+  @@map("prospect_lists")
+  @@schema("scraper")
+}
+
+model ProspectListItem {
+  id       Int    @id @default(autoincrement())
+  list_id  String
+  place_id String
+  rank     Int?
+  reason   String? @db.Text
+
+  list  ProspectList @relation(fields: [list_id],  references: [id], onDelete: Cascade)
+  place Place        @relation(fields: [place_id], references: [id], onDelete: Cascade)
+
+  @@unique([list_id, place_id])
+  @@map("prospect_list_items")
   @@schema("scraper")
 }
 
@@ -88,9 +118,10 @@ model Place {
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
-  favorites PlaceFavorite[]
-  reactions PlaceReaction[]
-  notes     PlaceNote[]
+  favorites     PlaceFavorite[]
+  reactions     PlaceReaction[]
+  notes         PlaceNote[]
+  prospectItems ProspectListItem[]
 
   @@map("places")
   @@schema("scraper")

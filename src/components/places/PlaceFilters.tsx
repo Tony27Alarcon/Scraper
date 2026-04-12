@@ -2,24 +2,26 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
-import { Search, X, Heart, Star, ArrowDown, ArrowUp, SlidersHorizontal, ChevronDown } from 'lucide-react'
+import { Search, X, Heart, Star, ArrowDown, ArrowUp, SlidersHorizontal, ChevronDown, ListChecks } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface PlaceFiltersProps {
-  categories:         string[]
-  batchTags:          string[]
-  currentSearch:      string
-  currentCategory:    string
-  currentBatchTag:    string
-  currentTemperature: string
-  currentFavorites:   boolean
-  currentMinRating:   string
-  currentMinScore:    string
-  currentSort:        string
-  currentOrder:       string
-  coldCount:          number
-  warmCount:          number
-  hotCount:           number
+  categories:          string[]
+  batchTags:           string[]
+  prospectLists:       { id: string; name: string }[]
+  currentSearch:       string
+  currentCategory:     string
+  currentBatchTag:     string
+  currentTemperature:  string
+  currentFavorites:    boolean
+  currentMinRating:    string
+  currentMinScore:     string
+  currentSort:         string
+  currentOrder:        string
+  currentProspectList: string
+  coldCount:           number
+  warmCount:           number
+  hotCount:            number
 }
 
 const SORT_OPTIONS = [
@@ -38,10 +40,10 @@ const TEMP_OPTIONS = [
 ]
 
 export function PlaceFilters({
-  categories, batchTags,
+  categories, batchTags, prospectLists,
   currentSearch, currentCategory, currentBatchTag,
   currentTemperature, currentFavorites, currentMinRating, currentMinScore,
-  currentSort, currentOrder,
+  currentSort, currentOrder, currentProspectList,
   coldCount, warmCount, hotCount,
 }: PlaceFiltersProps) {
   const router       = useRouter()
@@ -74,7 +76,7 @@ export function PlaceFilters({
   const hasFilters = !!(
     currentSearch || currentCategory || currentBatchTag ||
     currentTemperature || currentFavorites || currentMinRating ||
-    currentMinScore || currentSort !== 'recent'
+    currentMinScore || currentSort !== 'recent' || currentProspectList
   )
 
   const tempCounts: Record<string, number> = {
@@ -193,6 +195,38 @@ export function PlaceFilters({
           </select>
         )}
 
+        {prospectLists.length > 0 && (
+          <button
+            onClick={() => push({ prospect_list: currentProspectList ? '' : prospectLists[0].id })}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
+              currentProspectList
+                ? 'bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            )}
+          >
+            <ListChecks className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {currentProspectList
+                ? (prospectLists.find(l => l.id === currentProspectList)?.name ?? 'Prospectos')
+                : 'Prospectos'
+              }
+            </span>
+          </button>
+        )}
+
+        {prospectLists.length > 1 && currentProspectList && (
+          <select
+            value={currentProspectList}
+            onChange={(e) => push({ prospect_list: e.target.value })}
+            className="input-field w-auto min-w-[155px]"
+          >
+            {prospectLists.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+        )}
+
         {/* Pills de temperatura con contadores */}
         <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5 gap-0.5">
           {TEMP_OPTIONS.map(opt => {
@@ -304,6 +338,12 @@ export function PlaceFilters({
           )}
           {currentMinScore && (
             <FilterChip label={`Puntaje ≥ ${currentMinScore}★`} onRemove={() => push({ min_score: '' })} />
+          )}
+          {currentProspectList && (
+            <FilterChip
+              label={`📋 ${prospectLists.find(l => l.id === currentProspectList)?.name ?? 'Lista de prospectos'}`}
+              onRemove={() => push({ prospect_list: '' })}
+            />
           )}
           {currentSort !== 'recent' && (
             <FilterChip

@@ -10,29 +10,31 @@ import { authOptions } from '@/lib/auth'
 const PAGE_SIZE = 20
 
 interface SearchParams {
-  page?:        string
-  search?:      string
-  category?:    string
-  batch_tag?:   string
-  temperature?: string
-  favorites?:   string
-  min_rating?:  string
-  min_score?:   string
-  sort?:        string
-  order?:       string
+  page?:          string
+  search?:        string
+  category?:      string
+  batch_tag?:     string
+  temperature?:   string
+  favorites?:     string
+  min_rating?:    string
+  min_score?:     string
+  sort?:          string
+  order?:         string
+  prospect_list?: string
 }
 
 async function getPlaces(params: SearchParams, userId: number) {
-  const page        = Math.max(1, Number(params.page ?? 1))
-  const search      = params.search      ?? ''
-  const category    = params.category    ?? ''
-  const batchTag    = params.batch_tag   ?? ''
-  const temperature = params.temperature ?? ''
-  const favorites   = params.favorites   === 'true'
-  const minRating   = parseFloat(params.min_rating ?? '')
-  const minScore    = parseInt(params.min_score    ?? '')
-  const sort        = params.sort  ?? 'recent'
-  const order       = (params.order ?? 'desc') as 'asc' | 'desc'
+  const page         = Math.max(1, Number(params.page ?? 1))
+  const search       = params.search        ?? ''
+  const category     = params.category      ?? ''
+  const batchTag     = params.batch_tag     ?? ''
+  const temperature  = params.temperature   ?? ''
+  const favorites    = params.favorites     === 'true'
+  const minRating    = parseFloat(params.min_rating ?? '')
+  const minScore     = parseInt(params.min_score    ?? '')
+  const sort         = params.sort  ?? 'recent'
+  const order        = (params.order ?? 'desc') as 'asc' | 'desc'
+  const prospectList = params.prospect_list ?? ''
 
   // Base where without temperature (used for temp counts)
   const whereBase: any = {}
@@ -47,8 +49,9 @@ async function getPlaces(params: SearchParams, userId: number) {
   if (category)          whereBase.category      = { equals: category, mode: 'insensitive' }
   if (batchTag)          whereBase.batch_tag     = { equals: batchTag, mode: 'insensitive' }
   if (favorites)         whereBase.favorites     = { some: { user_id: userId } }
-  if (!isNaN(minRating)) whereBase.review_rating = { gte: minRating }
-  if (!isNaN(minScore))  whereBase.lead_score    = { gte: minScore }
+  if (!isNaN(minRating)) whereBase.review_rating  = { gte: minRating }
+  if (!isNaN(minScore))  whereBase.lead_score     = { gte: minScore }
+  if (prospectList)      whereBase.prospectItems  = { some: { list_id: prospectList } }
 
   // Full where including temperature
   const where: any = { ...whereBase }
@@ -61,7 +64,7 @@ async function getPlaces(params: SearchParams, userId: number) {
   if (sort === 'score')   orderBy = { lead_score:    order }
   if (sort === 'title')   orderBy = { title:         order }
 
-  const [raw, total, allCategories, allBatchTags, tempGroups] = await Promise.all([
+  const [raw, total, allCategories, allBatchTags, tempGroups, prospectLists] = await Promise.all([
     prisma.place.findMany({
       where,
       skip:    (page - 1) * PAGE_SIZE,
@@ -106,6 +109,10 @@ async function getPlaces(params: SearchParams, userId: number) {
       where: whereBase,
       _count: { _all: true },
     }),
+    prisma.prospectList.findMany({
+      select:  { id: true, name: true },
+      orderBy: { created_at: 'desc' },
+    }),
   ])
 
   const data = raw.map(({ favorites, ...p }) => ({
@@ -123,7 +130,7 @@ async function getPlaces(params: SearchParams, userId: number) {
   return {
     data, total, page,
     totalPages: Math.ceil(total / PAGE_SIZE),
-    categories, batchTags,
+    categories, batchTags, prospectLists,
     coldCount, warmCount, hotCount,
   }
 }
@@ -160,15 +167,17 @@ export default async function PlacesPage({
       <PlaceFilters
         categories={result.categories}
         batchTags={result.batchTags}
-        currentSearch={searchParams.search      ?? ''}
-        currentCategory={searchParams.category  ?? ''}
-        currentBatchTag={searchParams.batch_tag ?? ''}
+        prospectLists={result.prospectLists}
+        currentSearch={searchParams.search        ?? ''}
+        currentCategory={searchParams.category    ?? ''}
+        currentBatchTag={searchParams.batch_tag   ?? ''}
         currentTemperature={searchParams.temperature ?? ''}
-        currentFavorites={searchParams.favorites === 'true'}
+        currentFavorites={searchParams.favorites  === 'true'}
         currentMinRating={searchParams.min_rating ?? ''}
         currentMinScore={searchParams.min_score   ?? ''}
-        currentSort={searchParams.sort   ?? 'recent'}
-        currentOrder={searchParams.order ?? 'desc'}
+        currentSort={searchParams.sort            ?? 'recent'}
+        currentOrder={searchParams.order          ?? 'desc'}
+        currentProspectList={searchParams.prospect_list ?? ''}
         coldCount={result.coldCount}
         warmCount={result.warmCount}
         hotCount={result.hotCount}
