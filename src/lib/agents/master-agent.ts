@@ -9,17 +9,34 @@ function getFirecrawl() {
   return new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY ?? '' })
 }
 
-interface CreateMasterAgentOptions {
-  userId:          number
-  username:        string
-  companyContext?: string | null
-  currentPath:     string
+interface CompanyProfile {
+  name:         string
+  industry?:    string | null
+  description?: string | null
+  website?:     string | null
+  ai_context:   string
 }
 
-export function createMasterAgent({ userId, username, companyContext, currentPath }: CreateMasterAgentOptions) {
-  const companySection = companyContext
-    ? `\n\n## Perfil de la empresa (usa esto para contextualizar todo tu trabajo)\n${companyContext}`
-    : ''
+interface CreateMasterAgentOptions {
+  userId:      number
+  username:    string
+  company?:    CompanyProfile | null
+  currentPath: string
+}
+
+function buildCompanySection(company?: CompanyProfile | null): string {
+  if (!company) return ''
+  const lines = ['## Empresa (usa este perfil para contextualizar todo tu trabajo)']
+  lines.push(`- **Nombre:** ${company.name}`)
+  if (company.industry)    lines.push(`- **Industria / Nicho:** ${company.industry}`)
+  if (company.website)     lines.push(`- **Sitio web:** ${company.website}`)
+  if (company.description) lines.push(`- **Descripción:** ${company.description}`)
+  if (company.ai_context)  lines.push(`\n### Instrucciones y criterios\n${company.ai_context}`)
+  return '\n\n' + lines.join('\n')
+}
+
+export function createMasterAgent({ userId, username, company, currentPath }: CreateMasterAgentOptions) {
+  const companySection = buildCompanySection(company)
 
   return new ToolLoopAgent({
     model: google('gemini-2.5-flash'),

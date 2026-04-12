@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { Bot, Send, StopCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 
 interface AgentChatProps {
@@ -107,9 +108,26 @@ export function AgentChat({ placeId }: AgentChatProps) {
                 >
                   {message.parts.map((part, i) =>
                     part.type === 'text' ? (
-                      <span key={i} className="whitespace-pre-wrap">
-                        {part.text}
-                      </span>
+                      message.role === 'user' ? (
+                        <span key={i} className="whitespace-pre-wrap">{part.text}</span>
+                      ) : (
+                        <ReactMarkdown
+                          key={i}
+                          components={{
+                            p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                            strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5">{children}</ol>,
+                            li: ({ children }) => <li className="leading-snug">{children}</li>,
+                            h2: ({ children }) => <p className="font-semibold text-sm mb-1 text-gray-800">{children}</p>,
+                            h3: ({ children }) => <p className="font-medium text-sm mb-0.5 text-gray-700">{children}</p>,
+                            code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                            hr: () => <hr className="my-2 border-gray-300" />,
+                          }}
+                        >
+                          {part.text}
+                        </ReactMarkdown>
+                      )
                     ) : null,
                   )}
                 </div>

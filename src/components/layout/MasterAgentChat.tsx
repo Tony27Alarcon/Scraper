@@ -5,9 +5,10 @@ import { useChat } from '@ai-sdk/react'
 import { usePathname } from 'next/navigation'
 import { DefaultChatTransport } from 'ai'
 import {
-  Bot, Send, StopCircle, X, Loader2,
+  Bot, Send, StopCircle, X, Loader2, RotateCcw,
   BarChart2, Flame, Search, Star, Zap, FileText,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 
 const QUICK_PROMPTS = [
@@ -25,7 +26,7 @@ export function MasterAgentChat() {
   const bottomRef           = useRef<HTMLDivElement>(null)
   const pathname            = usePathname()
 
-  const { messages, sendMessage, status, stop } = useChat({
+  const { messages, sendMessage, status, stop, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api:     '/api/agent/master',
       headers: { 'x-current-path': pathname },
@@ -70,12 +71,23 @@ export function MasterAgentChat() {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg hover:bg-brand-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && !isLoading && (
+                <button
+                  onClick={() => setMessages([])}
+                  title="Nueva conversación"
+                  className="p-1 rounded-lg hover:bg-brand-700 transition-colors opacity-80 hover:opacity-100"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded-lg hover:bg-brand-700 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Mensajes */}
@@ -116,9 +128,27 @@ export function MasterAgentChat() {
                 >
                   {message.parts.map((part, i) =>
                     part.type === 'text' ? (
-                      <span key={i} className="whitespace-pre-wrap">
-                        {part.text}
-                      </span>
+                      message.role === 'user' ? (
+                        <span key={i} className="whitespace-pre-wrap">{part.text}</span>
+                      ) : (
+                        <ReactMarkdown
+                          key={i}
+                          components={{
+                            p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                            strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5">{children}</ol>,
+                            li: ({ children }) => <li className="leading-snug">{children}</li>,
+                            h1: ({ children }) => <p className="font-bold text-base mb-1">{children}</p>,
+                            h2: ({ children }) => <p className="font-semibold text-sm mb-1 text-gray-800">{children}</p>,
+                            h3: ({ children }) => <p className="font-medium text-sm mb-0.5 text-gray-700">{children}</p>,
+                            code: ({ children }) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                            hr: () => <hr className="my-2 border-gray-300" />,
+                          }}
+                        >
+                          {part.text}
+                        </ReactMarkdown>
+                      )
                     ) : null,
                   )}
                 </div>
