@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "scraper"."place_activities" (
+CREATE TABLE IF NOT EXISTS "scraper"."place_activities" (
     "id" SERIAL NOT NULL,
     "place_id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
@@ -13,10 +13,38 @@ CREATE TABLE "scraper"."place_activities" (
 );
 
 -- CreateIndex
-CREATE INDEX "place_activities_place_id_happened_at_idx" ON "scraper"."place_activities"("place_id", "happened_at" DESC);
+CREATE INDEX IF NOT EXISTS "place_activities_place_id_happened_at_idx" ON "scraper"."place_activities"("place_id", "happened_at" DESC);
 
--- AddForeignKey
-ALTER TABLE "scraper"."place_activities" ADD CONSTRAINT "place_activities_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "scraper"."places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- AddForeignKey (conditional — only if referenced tables exist)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'scraper' AND table_name = 'places'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'place_activities_place_id_fkey'
+    ) THEN
+      ALTER TABLE "scraper"."place_activities"
+        ADD CONSTRAINT "place_activities_place_id_fkey"
+        FOREIGN KEY ("place_id") REFERENCES "scraper"."places"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+  END IF;
 
--- AddForeignKey
-ALTER TABLE "scraper"."place_activities" ADD CONSTRAINT "place_activities_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "scraper"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'scraper' AND table_name = 'users'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'place_activities_user_id_fkey'
+    ) THEN
+      ALTER TABLE "scraper"."place_activities"
+        ADD CONSTRAINT "place_activities_user_id_fkey"
+        FOREIGN KEY ("user_id") REFERENCES "scraper"."users"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+  END IF;
+END $$;

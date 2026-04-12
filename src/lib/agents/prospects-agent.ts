@@ -128,7 +128,7 @@ Despues de guardar, entrega al usuario:
         inputSchema: z.object({}),
         execute: async () => {
           try {
-            const [total, byTemperature, byScore, topCategories, topCities, withPhone, withWebsite, ratingStats, unscored, withDescription] = await Promise.all([
+            const [total, byTemperature, byScore, topCategories, topCities, withPhone, withWebsite, withEmail, ratingStats, unscored, withDescription] = await Promise.all([
               prisma.place.count(),
               prisma.place.groupBy({
                 by:     ['lead_temperature'],
@@ -153,6 +153,7 @@ Despues de guardar, entrega al usuario:
               }),
               prisma.place.count({ where: { phone:   { not: null } } }),
               prisma.place.count({ where: { website: { not: null } } }),
+              prisma.place.count({ where: { email:   { not: null } } }),
               prisma.place.aggregate({
                 _avg: { review_rating: true },
                 _count: { review_rating: true },
@@ -174,6 +175,8 @@ Despues de guardar, entrega al usuario:
                 sinTelefono:     total - withPhone,
                 conWeb:          withWebsite,
                 sinWeb:          total - withWebsite,
+                conEmail:        withEmail,
+                sinEmail:        total - withEmail,
                 conDescripcion:  withDescription,
                 sinEvaluar:      unscored,
                 evaluados:       total - unscored,

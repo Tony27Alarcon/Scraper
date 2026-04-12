@@ -196,6 +196,7 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
               camposFaltantes: [
                 !place.phone && 'phone',
                 !place.website && 'website',
+                !place.email && 'email',
                 !place.descriptions && 'descriptions',
                 !place.city && 'city',
                 !place.country && 'country',
@@ -281,13 +282,12 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
           country:      z.string().optional().describe('Pais del negocio'),
           status:       z.string().optional().describe('Estado: activo, cerrado, duplicado, no_verificado'),
         }),
-        execute: async ({ email, ...data }) => {
+        execute: async (data) => {
           try {
             const updateData: Record<string, unknown> = {}
             for (const [key, value] of Object.entries(data)) {
               if (value !== undefined && value !== '') updateData[key] = value
             }
-            if (email) updateData.emails = [email]
 
             if (Object.keys(updateData).length === 0) {
               return { success: false, message: 'No hay campos para actualizar' }

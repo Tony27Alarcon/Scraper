@@ -6,7 +6,7 @@ import Papa from 'papaparse'
 import { CreateSchema, JSON_FIELDS, type CreateInput } from '@/lib/placeSchema'
 
 const SCALAR_FIELDS = [
-  'input_id', 'link', 'title', 'category', 'address', 'phone', 'website',
+  'input_id', 'link', 'title', 'category', 'address', 'phone', 'website', 'email',
   'plus_code', 'review_count', 'review_rating', 'latitude', 'longitude',
   'cid', 'status', 'descriptions', 'reviews_link', 'thumbnail', 'timezone',
   'price_range', 'data_id', 'place_id', 'batch_tag', 'city', 'country',

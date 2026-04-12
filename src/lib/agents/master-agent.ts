@@ -199,7 +199,7 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
                   country:          true,
                   phone:            true,
                   website:          true,
-                  emails:           true,
+                  email:            true,
                   review_rating:    true,
                   review_count:     true,
                   lead_score:       true,
@@ -225,7 +225,7 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
                 country:          p.country,
                 phone:            p.phone ?? null,
                 website:          p.website ?? null,
-                emails:           p.emails ?? null,
+                email:            p.email ?? null,
                 rating:           p.review_rating ? Number(p.review_rating) : null,
                 reviews:          p.review_count,
                 lead_score:       p.lead_score,
@@ -296,6 +296,7 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
               camposFaltantes: [
                 !place.phone && 'phone',
                 !place.website && 'website',
+                !place.email && 'email',
                 !place.descriptions && 'descriptions',
                 !place.city && 'city',
                 !place.country && 'country',
@@ -314,7 +315,7 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
         inputSchema: z.object({}),
         execute: async () => {
           try {
-            const [total, byTemperature, byScore, topCategories, withPhone, withWebsite, ratingAgg, topCities, recentCount, unscored] = await Promise.all([
+            const [total, byTemperature, byScore, topCategories, withPhone, withWebsite, withEmail, ratingAgg, topCities, recentCount, unscored] = await Promise.all([
               prisma.place.count(),
               prisma.place.groupBy({ by: ['lead_temperature'], _count: { _all: true } }),
               prisma.place.groupBy({ by: ['lead_score'], _count: { _all: true }, orderBy: { lead_score: 'asc' } }),
@@ -326,6 +327,7 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
               }),
               prisma.place.count({ where: { phone:   { not: null } } }),
               prisma.place.count({ where: { website: { not: null } } }),
+              prisma.place.count({ where: { email:   { not: null } } }),
               prisma.place.aggregate({ _avg: { review_rating: true }, _count: { review_rating: true } }),
               prisma.place.groupBy({
                 by:     ['city'],
@@ -341,8 +343,10 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
               total,
               withPhone,
               withWebsite,
+              withEmail,
               withoutPhone: total - withPhone,
               withoutWebsite: total - withWebsite,
+              withoutEmail: total - withEmail,
               unscored,
               recentlyAdded: recentCount,
               avgRating:    ratingAgg._avg.review_rating ? Number(ratingAgg._avg.review_rating).toFixed(1) : null,
