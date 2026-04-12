@@ -1,29 +1,40 @@
 import { ToolLoopAgent, tool } from 'ai'
 import { google } from '@ai-sdk/google'
 import { prisma } from '@/lib/prisma'
+import Firecrawl from '@mendable/firecrawl-js'
 import { z } from 'zod'
 
-export function createPlaceAgent(placeId: string, userId: number, username: string) {
+function getFirecrawl() {
+  return new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY ?? '' })
+}
+
+interface CreatePlaceAgentOptions {
+  placeId:        string
+  userId:         number
+  username:       string
+  companyContext?: string | null
+}
+
+export function createPlaceAgent({ placeId, userId, username, companyContext }: CreatePlaceAgentOptions) {
+  const companySection = companyContext
+    ? `\n\n## Perfil de la empresa (usa esto para contextualizar cada análisis)\n${companyContext}`
+    : ''
+
   return new ToolLoopAgent({
     model: google('gemini-2.5-flash'),
     instructions: `Eres un asistente especializado en gestión de leads y negocios locales.
-Tu tarea es ayudar a investigar, completar información y organizar por prioridad el lugar con ID: ${placeId}.
+Tu tarea es ayudar a investigar, completar información y organizar por prioridad el lugar con ID: ${placeId}.${companySection}
 
 Flujo recomendado al investigar:
-1. Llama a getPlaceInfo para ver los datos actuales
-2. Usa google_search para buscar información actualizada del negocio
-3. Actualiza los campos vacíos o incorrectos con updatePlace
-4. Evalúa la prioridad y usa setPriority si corresponde
-5. Deja una nota con addNote si tienes observaciones relevantes
-
-Criterios de prioridad:
-- hot (score 4-5): negocio activo, tiene web, buen rating (+4), datos completos
-- warm (score 2-3): negocio establecido pero con datos incompletos o rating medio
-- cold (score 1): negocio cerrado, sin web, datos escasos o rating bajo
+1. Llama a getPlaceInfo para ver los datos actuales del lugar
+2. Usa searchWeb para buscar el negocio por nombre + ciudad y encontrar fuentes relevantes
+3. Si encuentras una URL concreta (web oficial, Google Maps, redes sociales), usa scrapePage para extraer detalles
+4. Actualiza los campos vacíos o incorrectos con updatePlace
+5. Evalúa la prioridad y usa setPriority según los criterios de la empresa
+6. Deja una nota con addNote resumiendo los hallazgos y su relevancia para la empresa
 
 Responde siempre en español. Sé conciso y directo en tus respuestas.`,
     tools: {
-      google_search: google.tools.googleSearch({}),
       getPlaceInfo: tool({
         description: 'Obtiene la información actual del lugar desde la base de datos, incluyendo las últimas notas',
         inputSchema: z.object({}),
@@ -39,6 +50,43 @@ Responde siempre en español. Sé conciso y directo en tus respuestas.`,
             },
           })
           return place
+        },
+      }),
+      searchWeb: tool({
+        description: 'Busca información en internet sobre el lugar usando Firecrawl. Devuelve URLs, títulos y fragmentos relevantes.',
+        inputSchema: z.object({
+          query: z.string().describe('Consulta de búsqueda, ej: "Restaurante La Mar Lima Perú telefono web"'),
+          limit: z.number().min(1).max(10).default(5).describe('Número máximo de resultados'),
+        }),
+        execute: async ({ query, limit }) => {
+          const fc = getFirecrawl()
+          const result = await fc.search(query, { limit })
+          const items = result.web ?? []
+          return items.map((item) => {
+            const asWeb = item as { url?: string; title?: string; description?: string; markdown?: string; metadata?: { title?: string; description?: string } }
+            return {
+              url: asWeb.url ?? '',
+              title: asWeb.title ?? asWeb.metadata?.title ?? '',
+              description: asWeb.description ?? asWeb.metadata?.description ?? '',
+              content: (asWeb.markdown ?? '').slice(0, 800),
+            }
+          })
+        },
+      }),
+      scrapePage: tool({
+        description: 'Extrae el contenido completo de una URL específica. Útil para obtener teléfono, horarios, descripción y otros detalles de la web oficial del negocio.',
+        inputSchema: z.object({
+          url: z.string().url().describe('URL de la página a extraer'),
+        }),
+        execute: async ({ url }) => {
+          const fc = getFirecrawl()
+          const result = await fc.scrape(url, { formats: ['markdown'] })
+          return {
+            url,
+            title: result.metadata?.title ?? '',
+            description: result.metadata?.description ?? '',
+            content: (result.markdown ?? '').slice(0, 3000),
+          }
         },
       }),
       updatePlace: tool({

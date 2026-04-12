@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, MapPin, Users, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, MapPin, Users, Building2, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard, adminOnly: false },
   { href: '/places',    label: 'Lugares',     icon: MapPin,          adminOnly: false },
+  { href: '/companies', label: 'Empresas',    icon: Building2,       adminOnly: true  },
   { href: '/users',     label: 'Usuarios',    icon: Users,           adminOnly: true  },
 ]
 

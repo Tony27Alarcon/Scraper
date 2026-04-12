@@ -6,10 +6,11 @@ import { hashPassword } from '@/lib/hash'
 import { z } from 'zod'
 
 const UpdateUserSchema = z.object({
-  username: z.string().min(2).optional(),
-  status:   z.enum(['active', 'inactive']).optional(),
-  role:     z.enum(['admin', 'user']).optional(),
-  password: z.string().min(8).optional(),
+  username:   z.string().min(2).optional(),
+  status:     z.enum(['active', 'inactive']).optional(),
+  role:       z.enum(['admin', 'user']).optional(),
+  password:   z.string().min(8).optional(),
+  company_id: z.string().nullable().optional(),
 })
 
 export async function PUT(

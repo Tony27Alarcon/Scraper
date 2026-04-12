@@ -10,6 +10,22 @@ datasource db {
   schemas   = ["scraper"]
 }
 
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  industry    String?
+  description String?  @db.Text
+  website     String?
+  ai_context  String   @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  users User[]
+
+  @@map("companies")
+  @@schema("scraper")
+}
+
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
@@ -17,6 +33,8 @@ model User {
   password_hash String
   status        String   @default("inactive")
   role          String   @default("user")
+  company_id    String?
+  company       Company? @relation(fields: [company_id], references: [id], onDelete: SetNull)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 

@@ -4,18 +4,25 @@ import { UserPlus } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function UsersPage() {
-  const users = await prisma.user.findMany({
-    select: {
-      id:         true,
-      email:      true,
-      username:   true,
-      status:     true,
-      role:       true,
-      created_at: true,
-      updated_at: true,
-    },
-    orderBy: { created_at: 'desc' },
-  })
+  const [users, companies] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id:         true,
+        email:      true,
+        username:   true,
+        status:     true,
+        role:       true,
+        created_at: true,
+        updated_at: true,
+        company:    { select: { id: true, name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.company.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
 
   return (
     <div className="space-y-5">
@@ -32,7 +39,7 @@ export default async function UsersPage() {
         </Link>
       </div>
 
-      <UsersTable users={users as any} />
+      <UsersTable users={users as any} companies={companies} />
     </div>
   )
 }

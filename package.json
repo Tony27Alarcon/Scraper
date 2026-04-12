@@ -16,6 +16,7 @@
     "@ai-sdk/google": "^3.0.62",
     "@ai-sdk/react": "^3.0.160",
     "@hookform/resolvers": "^3.9.1",
+    "@mendable/firecrawl-js": "^4.18.2",
     "@prisma/client": "^5.22.0",
     "@tanstack/react-table": "^8.20.5",
     "ai": "^6.0.158",

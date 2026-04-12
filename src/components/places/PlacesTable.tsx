@@ -246,6 +246,7 @@ export function PlacesTable({
                   {/* Acciones */}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <AgentQuickActions placeId={place.id!} />
                       <Link
                         href={`/places/${place.id}${backParam}`}
                         className="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
