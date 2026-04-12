@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, Pencil, Trash2, Star, ChevronLeft, ChevronRight, Globe, Phone } from 'lucide-react'
+import {
+  Eye, Pencil, Trash2, Star, ChevronLeft, ChevronRight,
+  Globe, Phone, ArrowUp, ArrowDown, ArrowUpDown,
+} from 'lucide-react'
 import { Place } from '@/types/place'
 import { formatRating, truncate, cn } from '@/lib/utils'
 import { FavoriteButton }   from '@/components/crm/FavoriteButton'
@@ -17,9 +20,45 @@ interface PlacesTableProps {
   totalPages:    number
   isAdmin:       boolean
   currentUserId: number
+  currentSort:   string
+  currentOrder:  string
 }
 
-export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUserId }: PlacesTableProps) {
+function SortableHeader({
+  label, sortKey, currentSort, currentOrder, onSort, className,
+}: {
+  label:        string
+  sortKey:      string
+  currentSort:  string
+  currentOrder: string
+  onSort:       (key: string) => void
+  className?:   string
+}) {
+  const isActive = currentSort === sortKey
+  return (
+    <button
+      onClick={() => onSort(sortKey)}
+      className={cn('flex items-center gap-1 group select-none', className)}
+    >
+      <span className={cn(
+        'font-medium transition-colors',
+        isActive ? 'text-brand-600' : 'text-gray-600 group-hover:text-gray-900'
+      )}>
+        {label}
+      </span>
+      {isActive
+        ? (currentOrder === 'desc'
+            ? <ArrowDown  className="w-3.5 h-3.5 text-brand-500" />
+            : <ArrowUp    className="w-3.5 h-3.5 text-brand-500" />)
+        : <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400" />
+      }
+    </button>
+  )
+}
+
+export function PlacesTable({
+  data, total, page, totalPages, isAdmin, currentUserId, currentSort, currentOrder,
+}: PlacesTableProps) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
@@ -28,6 +67,19 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
   function goToPage(p: number) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('page', String(p))
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  function handleSort(sortKey: string) {
+    const params   = new URLSearchParams(searchParams.toString())
+    const prevSort = params.get('sort') ?? 'recent'
+    if (prevSort === sortKey) {
+      params.set('order', params.get('order') === 'desc' ? 'asc' : 'desc')
+    } else {
+      params.set('sort',  sortKey)
+      params.set('order', sortKey === 'title' ? 'asc' : 'desc')
+    }
+    params.delete('page')
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -42,6 +94,11 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
     }
   }
 
+  // Encode current params so the detail page can navigate back with filters intact
+  const backParam = searchParams.toString()
+    ? `?back=${encodeURIComponent(searchParams.toString())}`
+    : ''
+
   const start = (page - 1) * 20 + 1
   const end   = Math.min(page * 20, total)
 
@@ -51,11 +108,39 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Lugar</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Categoría</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">Contacto</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Rating</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Lead</th>
+              <th className="text-left px-4 py-3">
+                <SortableHeader
+                  label="Lugar"
+                  sortKey="title"
+                  currentSort={currentSort}
+                  currentOrder={currentOrder}
+                  onSort={handleSort}
+                />
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">
+                Categoría
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">
+                Contacto
+              </th>
+              <th className="text-left px-4 py-3">
+                <SortableHeader
+                  label="Rating"
+                  sortKey="rating"
+                  currentSort={currentSort}
+                  currentOrder={currentOrder}
+                  onSort={handleSort}
+                />
+              </th>
+              <th className="text-left px-4 py-3 hidden sm:table-cell">
+                <SortableHeader
+                  label="Lead"
+                  sortKey="score"
+                  currentSort={currentSort}
+                  currentOrder={currentOrder}
+                  onSort={handleSort}
+                />
+              </th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Acciones</th>
             </tr>
           </thead>
@@ -162,7 +247,7 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <Link
-                        href={`/places/${place.id}`}
+                        href={`/places/${place.id}${backParam}`}
                         className="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
                         title="Ver detalle"
                       >
@@ -196,7 +281,7 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Paginación */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
           <p className="text-sm text-gray-500">
@@ -212,10 +297,10 @@ export function PlacesTable({ data, total, page, totalPages, isAdmin, currentUse
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let p: number
-              if (totalPages <= 5)        p = i + 1
-              else if (page <= 3)         p = i + 1
+              if (totalPages <= 5)             p = i + 1
+              else if (page <= 3)              p = i + 1
               else if (page >= totalPages - 2) p = totalPages - 4 + i
-              else                        p = page - 2 + i
+              else                             p = page - 2 + i
               return (
                 <button
                   key={p}

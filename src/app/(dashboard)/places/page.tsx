@@ -10,40 +10,63 @@ import { authOptions } from '@/lib/auth'
 const PAGE_SIZE = 20
 
 interface SearchParams {
-  page?:      string
-  search?:    string
-  category?:  string
-  batch_tag?: string
+  page?:        string
+  search?:      string
+  category?:    string
+  batch_tag?:   string
+  temperature?: string
+  favorites?:   string
+  min_rating?:  string
+  min_score?:   string
+  sort?:        string
+  order?:       string
 }
 
 async function getPlaces(params: SearchParams, userId: number) {
-  const page     = Math.max(1, Number(params.page ?? 1))
-  const search   = params.search    ?? ''
-  const category = params.category  ?? ''
-  const batchTag = params.batch_tag ?? ''
+  const page        = Math.max(1, Number(params.page ?? 1))
+  const search      = params.search      ?? ''
+  const category    = params.category    ?? ''
+  const batchTag    = params.batch_tag   ?? ''
+  const temperature = params.temperature ?? ''
+  const favorites   = params.favorites   === 'true'
+  const minRating   = parseFloat(params.min_rating ?? '')
+  const minScore    = parseInt(params.min_score    ?? '')
+  const sort        = params.sort  ?? 'recent'
+  const order       = (params.order ?? 'desc') as 'asc' | 'desc'
 
-  const where: any = {}
+  // Base where without temperature (used for temp counts)
+  const whereBase: any = {}
   if (search) {
-    where.OR = [
+    whereBase.OR = [
       { title:    { contains: search, mode: 'insensitive' } },
       { address:  { contains: search, mode: 'insensitive' } },
       { category: { contains: search, mode: 'insensitive' } },
       { phone:    { contains: search, mode: 'insensitive' } },
     ]
   }
-  if (category) {
-    where.category = { equals: category, mode: 'insensitive' }
-  }
-  if (batchTag) {
-    where.batch_tag = { equals: batchTag, mode: 'insensitive' }
-  }
+  if (category)          whereBase.category      = { equals: category, mode: 'insensitive' }
+  if (batchTag)          whereBase.batch_tag     = { equals: batchTag, mode: 'insensitive' }
+  if (favorites)         whereBase.favorites     = { some: { user_id: userId } }
+  if (!isNaN(minRating)) whereBase.review_rating = { gte: minRating }
+  if (!isNaN(minScore))  whereBase.lead_score    = { gte: minScore }
 
-  const [raw, total, allCategories, allBatchTags] = await Promise.all([
+  // Full where including temperature
+  const where: any = { ...whereBase }
+  if (temperature) where.lead_temperature = temperature
+
+  // Sorting
+  let orderBy: any = { created_at: order }
+  if (sort === 'rating')  orderBy = { review_rating: order }
+  if (sort === 'reviews') orderBy = { review_count:  order }
+  if (sort === 'score')   orderBy = { lead_score:    order }
+  if (sort === 'title')   orderBy = { title:         order }
+
+  const [raw, total, allCategories, allBatchTags, tempGroups] = await Promise.all([
     prisma.place.findMany({
       where,
       skip:    (page - 1) * PAGE_SIZE,
       take:    PAGE_SIZE,
-      orderBy: { created_at: 'desc' },
+      orderBy,
       select: {
         id:               true,
         title:            true,
@@ -77,6 +100,12 @@ async function getPlaces(params: SearchParams, userId: number) {
       where:    { batch_tag: { not: null } },
       orderBy:  { batch_tag: 'asc' },
     }),
+    // Count by temperature using the base where (without temp filter)
+    prisma.place.groupBy({
+      by:    ['lead_temperature'],
+      where: whereBase,
+      _count: { _all: true },
+    }),
   ])
 
   const data = raw.map(({ favorites, ...p }) => ({
@@ -87,7 +116,16 @@ async function getPlaces(params: SearchParams, userId: number) {
   const categories = allCategories.map(c => c.category).filter(Boolean) as string[]
   const batchTags  = allBatchTags.map(b => b.batch_tag).filter(Boolean) as string[]
 
-  return { data, total, page, totalPages: Math.ceil(total / PAGE_SIZE), categories, batchTags }
+  const coldCount = tempGroups.find(t => t.lead_temperature === 'cold')?._count._all ?? 0
+  const warmCount = tempGroups.find(t => t.lead_temperature === 'warm')?._count._all ?? 0
+  const hotCount  = tempGroups.find(t => t.lead_temperature === 'hot')?._count._all  ?? 0
+
+  return {
+    data, total, page,
+    totalPages: Math.ceil(total / PAGE_SIZE),
+    categories, batchTags,
+    coldCount, warmCount, hotCount,
+  }
 }
 
 export default async function PlacesPage({
@@ -105,7 +143,7 @@ export default async function PlacesPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Lugares</h1>
           <p className="text-gray-500 mt-0.5">
-            {result.total.toLocaleString('es-ES')} lugares en total
+            {result.total.toLocaleString('es-ES')} lugares encontrados
           </p>
         </div>
         {session?.user?.role === 'admin' && (
@@ -122,9 +160,18 @@ export default async function PlacesPage({
       <PlaceFilters
         categories={result.categories}
         batchTags={result.batchTags}
-        currentSearch={searchParams.search ?? ''}
-        currentCategory={searchParams.category ?? ''}
+        currentSearch={searchParams.search      ?? ''}
+        currentCategory={searchParams.category  ?? ''}
         currentBatchTag={searchParams.batch_tag ?? ''}
+        currentTemperature={searchParams.temperature ?? ''}
+        currentFavorites={searchParams.favorites === 'true'}
+        currentMinRating={searchParams.min_rating ?? ''}
+        currentMinScore={searchParams.min_score   ?? ''}
+        currentSort={searchParams.sort   ?? 'recent'}
+        currentOrder={searchParams.order ?? 'desc'}
+        coldCount={result.coldCount}
+        warmCount={result.warmCount}
+        hotCount={result.hotCount}
       />
 
       <PlacesTable
@@ -134,6 +181,8 @@ export default async function PlacesPage({
         totalPages={result.totalPages}
         isAdmin={session?.user?.role === 'admin'}
         currentUserId={userId}
+        currentSort={searchParams.sort   ?? 'recent'}
+        currentOrder={searchParams.order ?? 'desc'}
       />
     </div>
   )

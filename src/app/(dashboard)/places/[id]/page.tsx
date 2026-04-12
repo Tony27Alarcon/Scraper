@@ -10,9 +10,15 @@ import { authOptions } from '@/lib/auth'
 
 export default async function PlaceDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string }
+  searchParams: { back?: string }
 }) {
+  // URL de retorno con los filtros activos preservados
+  const backUrl = searchParams.back
+    ? `/places?${decodeURIComponent(searchParams.back)}`
+    : '/places'
   const session = await getServerSession(authOptions)
   const userId  = parseInt(session?.user?.id ?? '0')
   const isAdmin = session?.user?.role === 'admin'
@@ -52,7 +58,7 @@ export default async function PlaceDetailPage({
     <div className="max-w-6xl space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/places" className="btn-secondary p-2">
+          <Link href={backUrl} className="btn-secondary p-2">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
