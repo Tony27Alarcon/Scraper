@@ -42,22 +42,36 @@ export async function POST(req: NextRequest) {
   const batchTag = (formData.get('batch_tag') as string | null)?.trim() || undefined
 
   const fileName = (file as File).name ?? ''
-  if (!fileName.endsWith('.csv')) {
-    return NextResponse.json({ error: 'Solo se aceptan archivos .csv' }, { status: 400 })
+  if (!fileName.endsWith('.csv') && !fileName.endsWith('.tsv')) {
+    return NextResponse.json({ error: 'Solo se aceptan archivos .csv o .tsv' }, { status: 400 })
   }
 
   const text = await file.text()
 
+  // Detectar delimitador automáticamente (soporta CSV y TSV)
+  const delimiter = text.indexOf('\t') !== -1 ? '\t' : ','
+
   const { data: rows } = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
+    delimiter,
+  })
+
+  // Algunos exportadores TSV agregan columnas vacías al final — las eliminamos
+  const validFields = new Set([...SCALAR_FIELDS, ...JSON_FIELDS])
+  const cleanRows = rows.map(row => {
+    const cleaned: Record<string, string> = {}
+    for (const [k, v] of Object.entries(row)) {
+      if (k.trim() !== '' && validFields.has(k.trim())) cleaned[k.trim()] = v
+    }
+    return cleaned
   })
 
   const toInsert: CreateInput[] = []
   const errors: Array<{ row: number; message: string }> = []
 
-  for (let i = 0; i < rows.length; i++) {
-    const raw = rows[i]
+  for (let i = 0; i < cleanRows.length; i++) {
+    const raw = cleanRows[i]
     const rowNum = i + 2 // +1 para índice 0, +1 por la fila de headers
 
     const payload: Record<string, unknown> = {}
@@ -104,16 +118,22 @@ export async function POST(req: NextRequest) {
       const withPlaceId    = toInsert.filter((r: any) => r.place_id)
       const withoutPlaceId = toInsert.filter((r: any) => !r.place_id)
 
-      // Buscar cuáles place_ids ya existen para omitirlos
+      // Deduplicar place_id DENTRO del mismo CSV (evita unique constraint en createMany)
+      const seenInCsv = new Map<string, CreateInput>()
+      for (const r of withPlaceId) seenInCsv.set((r as any).place_id, r)
+      const uniqueInCsv = Array.from(seenInCsv.values())
+      skipped += withPlaceId.length - uniqueInCsv.length
+
+      // Buscar cuáles place_ids ya existen en la base de datos
       const existingIds = new Set(
         (await prisma.place.findMany({
-          where: { place_id: { in: withPlaceId.map((r: any) => r.place_id) } },
+          where: { place_id: { in: uniqueInCsv.map((r: any) => r.place_id) } },
           select: { place_id: true },
         })).map(r => r.place_id)
       )
 
-      const newRecords = withPlaceId.filter((r: any) => !existingIds.has(r.place_id))
-      skipped += withPlaceId.length - newRecords.length
+      const newRecords = uniqueInCsv.filter((r: any) => !existingIds.has(r.place_id))
+      skipped += uniqueInCsv.length - newRecords.length
 
       // Insertar en chunks los registros nuevos
       const CHUNK_SIZE = 500

@@ -108,6 +108,11 @@ export function PlaceDetail({ place }: PlaceDetailProps) {
               {place.website} <ExternalLink className="w-3 h-3" />
             </a>
           ) : null} />
+          <DataRow label="Email"          value={place.email ? (
+            <a href={`mailto:${place.email}`} className="text-brand-600 hover:underline flex items-center gap-1">
+              {place.email} <Mail className="w-3 h-3" />
+            </a>
+          ) : null} />
           <DataRow label="Rango de Precio" value={place.price_range} />
           <DataRow label="Estado"          value={place.status} />
           <DataRow label="Zona Horaria"    value={place.timezone} />

@@ -26,6 +26,7 @@ export const CreateSchema = z.object({
   address:               z.string().optional(),
   phone:                 z.string().optional(),
   website:               z.string().optional(),
+  email:                 z.string().email().optional().or(z.literal('')),
   review_count:          z.coerce.number().int().nonnegative().optional(),
   review_rating:         z.coerce.number().min(0).max(5).optional(),
   latitude:              z.coerce.number().optional(),

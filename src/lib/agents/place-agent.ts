@@ -144,32 +144,55 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
 
     tools: {
       getPlaceInfo: tool({
-        description: 'Obtiene TODA la informacion actual del lugar desde la base de datos: contacto, ubicacion, CRM, notas previas y campos faltantes. SIEMPRE es tu primer paso — necesitas saber que datos ya existen y cuales faltan antes de investigar.',
+        description: 'Obtiene TODA la informacion actual del lugar desde la base de datos: contacto, ubicacion, CRM, historial de actividades/notas y campos faltantes. SIEMPRE es tu primer paso — necesitas saber que datos ya existen, que acciones se han tomado y cuales faltan antes de investigar.',
         inputSchema: z.object({}),
         execute: async () => {
           try {
-            const place = await prisma.place.findUnique({
-              where: { id: placeId },
-              include: {
-                notes: {
-                  orderBy: { created_at: 'desc' },
-                  take: 5,
-                  select: { content: true, username: true, created_at: true },
+            const [place, activities, notes] = await Promise.all([
+              prisma.place.findUnique({
+                where: { id: placeId },
+                include: {
+                  _count: { select: { favorites: true, reactions: true, notes: true, activities: true } },
                 },
-                _count: {
-                  select: { favorites: true, reactions: true, notes: true },
-                },
-              },
-            })
+              }),
+              prisma.placeActivity.findMany({
+                where:   { place_id: placeId },
+                orderBy: { happened_at: 'desc' },
+                take:    10,
+                select:  { type: true, content: true, username: true, happened_at: true },
+              }),
+              prisma.placeNote.findMany({
+                where:   { place_id: placeId },
+                orderBy: { created_at: 'desc' },
+                take:    5,
+                select:  { content: true, username: true, created_at: true },
+              }),
+            ])
             if (!place) return { error: 'Lugar no encontrado en la base de datos' }
+
+            // Construir timeline legible para el agente
+            const timelineEntries = [
+              ...activities.map(a => ({ type: a.type, content: a.content, username: a.username, date: a.happened_at })),
+              ...notes.map(n => ({ type: 'note', content: n.content, username: n.username, date: n.created_at })),
+            ]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 10)
+
+            const timelineText = timelineEntries.length > 0
+              ? timelineEntries.map(e =>
+                  `- [${e.type}, ${new Date(e.date).toLocaleDateString('es-ES')}] ${e.username ?? 'Usuario'}: "${e.content ?? '(sin descripción)'}"`
+                ).join('\n')
+              : 'Sin actividad registrada aún'
 
             return {
               ...place,
-              review_rating: place.review_rating ? Number(place.review_rating) : null,
-              latitude:      place.latitude ? Number(place.latitude) : null,
-              longitude:     place.longitude ? Number(place.longitude) : null,
-              totalNotes:    place._count.notes,
+              review_rating:  place.review_rating ? Number(place.review_rating) : null,
+              latitude:       place.latitude ? Number(place.latitude) : null,
+              longitude:      place.longitude ? Number(place.longitude) : null,
+              totalActivities: place._count.activities,
+              totalNotes:     place._count.notes,
               totalFavorites: place._count.favorites,
+              timeline:       timelineText,
               camposFaltantes: [
                 !place.phone && 'phone',
                 !place.website && 'website',
@@ -318,6 +341,30 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
             return { success: true, noteId: note.id }
           } catch (err) {
             return { success: false, error: `Error al crear nota: ${String(err)}` }
+          }
+        },
+      }),
+
+      addActivity: tool({
+        description: 'Registra una actividad de IA en el historial del lugar. Usala cuando: completes una investigacion importante, encuentres datos clave, o tomes una accion relevante que el equipo deba conocer. Esto queda como historial visible para todo el equipo.',
+        inputSchema: z.object({
+          content: z.string().min(10).describe('Descripcion de la accion realizada o hallazgo encontrado. Sé concreto y util para el equipo.'),
+        }),
+        execute: async ({ content }) => {
+          try {
+            await prisma.placeActivity.create({
+              data: {
+                place_id:    placeId,
+                user_id:     userId,
+                username:    `${username} (Scout AI)`,
+                type:        'ai_action',
+                content,
+                happened_at: new Date(),
+              },
+            })
+            return { success: true }
+          } catch (err) {
+            return { success: false, error: `Error al registrar actividad: ${String(err)}` }
           }
         },
       }),

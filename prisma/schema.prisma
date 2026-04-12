@@ -41,6 +41,7 @@ model User {
   favorites     PlaceFavorite[]
   reactions     PlaceReaction[]
   notes         PlaceNote[]
+  activities    PlaceActivity[]
   prospectLists ProspectList[]
 
   @@map("users")
@@ -87,6 +88,7 @@ model Place {
   popular_times         Json?
   website               String?
   phone                 String?
+  email                 String?
   plus_code             String?
   review_count          Int?
   review_rating         Decimal? @db.Decimal(3, 1)
@@ -123,6 +125,7 @@ model Place {
   favorites     PlaceFavorite[]
   reactions     PlaceReaction[]
   notes         PlaceNote[]
+  activities    PlaceActivity[]
   prospectItems ProspectListItem[]
 
   @@map("places")
@@ -168,5 +171,22 @@ model PlaceNote {
   updated_at DateTime @updatedAt
 
   @@map("place_notes")
+  @@schema("scraper")
+}
+
+model PlaceActivity {
+  id          Int      @id @default(autoincrement())
+  place       Place    @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  place_id    String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id     Int
+  username    String?
+  type        String   // call | email | whatsapp | meeting | contacted | ai_action | other
+  content     String?  @db.Text
+  happened_at DateTime @default(now())
+  created_at  DateTime @default(now())
+
+  @@index([place_id, happened_at(sort: Desc)])
+  @@map("place_activities")
   @@schema("scraper")
 }

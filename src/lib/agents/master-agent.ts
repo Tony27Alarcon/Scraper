@@ -242,35 +242,57 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
       }),
 
       getPlaceDetail: tool({
-        description: 'Obtiene TODA la informacion de un lugar: contacto, horarios, descripcion, CRM, notas recientes y datos del dueño. Usala SIEMPRE antes de investigar, actualizar o evaluar un lugar. Te da el panorama completo para tomar decisiones.',
+        description: 'Obtiene TODA la informacion de un lugar: contacto, horarios, descripcion, CRM, historial de actividades/contactos y datos del dueño. Usala SIEMPRE antes de investigar, actualizar o evaluar un lugar. El historial de actividades te muestra que acciones ya se tomaron.',
         inputSchema: z.object({
           placeId: z.string().describe('ID del lugar'),
         }),
         execute: async ({ placeId }) => {
           try {
-            const place = await prisma.place.findUnique({
-              where:   { id: placeId },
-              include: {
-                notes: {
-                  orderBy: { created_at: 'desc' },
-                  take:    5,
-                  select:  { content: true, username: true, created_at: true },
+            const [place, activities, notes] = await Promise.all([
+              prisma.place.findUnique({
+                where:   { id: placeId },
+                include: {
+                  _count: { select: { favorites: true, reactions: true, notes: true, activities: true } },
                 },
-                _count: {
-                  select: { favorites: true, reactions: true, notes: true },
-                },
-              },
-            })
+              }),
+              prisma.placeActivity.findMany({
+                where:   { place_id: placeId },
+                orderBy: { happened_at: 'desc' },
+                take:    8,
+                select:  { type: true, content: true, username: true, happened_at: true },
+              }),
+              prisma.placeNote.findMany({
+                where:   { place_id: placeId },
+                orderBy: { created_at: 'desc' },
+                take:    3,
+                select:  { content: true, username: true, created_at: true },
+              }),
+            ])
             if (!place) return { error: `Lugar con ID ${placeId} no encontrado` }
+
+            const timelineEntries = [
+              ...activities.map(a => ({ type: a.type, content: a.content, username: a.username, date: a.happened_at })),
+              ...notes.map(n => ({ type: 'note', content: n.content, username: n.username, date: n.created_at })),
+            ]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 8)
+
+            const timelineText = timelineEntries.length > 0
+              ? timelineEntries.map(e =>
+                  `- [${e.type}, ${new Date(e.date).toLocaleDateString('es-ES')}] ${e.username ?? 'Usuario'}: "${e.content ?? '(sin descripción)'}"`
+                ).join('\n')
+              : 'Sin actividad registrada aún'
 
             return {
               ...place,
-              review_rating: place.review_rating ? Number(place.review_rating) : null,
-              latitude:      place.latitude ? Number(place.latitude) : null,
-              longitude:     place.longitude ? Number(place.longitude) : null,
-              totalNotes:    place._count.notes,
-              totalFavorites: place._count.favorites,
-              totalReactions: place._count.reactions,
+              review_rating:   place.review_rating ? Number(place.review_rating) : null,
+              latitude:        place.latitude ? Number(place.latitude) : null,
+              longitude:       place.longitude ? Number(place.longitude) : null,
+              totalActivities: place._count.activities,
+              totalNotes:      place._count.notes,
+              totalFavorites:  place._count.favorites,
+              totalReactions:  place._count.reactions,
+              timeline:        timelineText,
               camposFaltantes: [
                 !place.phone && 'phone',
                 !place.website && 'website',
@@ -421,14 +443,12 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
           country:      z.string().optional().describe('Pais donde esta ubicado el negocio'),
           status:       z.string().optional().describe('Estado: activo, cerrado, duplicado, no_verificado'),
         }),
-        execute: async ({ placeId, email, ...data }) => {
+        execute: async ({ placeId, ...data }) => {
           try {
             const updateData: Record<string, unknown> = {}
             for (const [key, value] of Object.entries(data)) {
               if (value !== undefined && value !== '') updateData[key] = value
             }
-            // emails is a JSON field in the schema
-            if (email) updateData.emails = [email]
 
             if (Object.keys(updateData).length === 0) {
               return { success: false, message: 'No hay campos para actualizar' }

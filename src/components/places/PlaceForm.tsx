@@ -17,6 +17,7 @@ const PlaceSchema = z.object({
   address:        z.string().optional(),
   phone:          z.string().optional(),
   website:        z.string().optional(),
+  email:          z.string().optional(),
   descriptions:   z.string().optional(),
   status:         z.string().optional(),
   price_range:    z.string().optional(),
@@ -82,6 +83,7 @@ export function PlaceForm({ mode, place }: PlaceFormProps) {
       address:       place.address    ?? '',
       phone:         place.phone      ?? '',
       website:       place.website    ?? '',
+      email:         place.email      ?? '',
       descriptions:  place.descriptions ?? '',
       status:        place.status     ?? '',
       price_range:   place.price_range ?? '',
@@ -231,6 +233,7 @@ export function PlaceForm({ mode, place }: PlaceFormProps) {
           <Field label="Dirección"   name="address"    placeholder="Calle 123, Ciudad" />
           <Field label="Teléfono"    name="phone"      placeholder="+1 234 567 8900" />
           <Field label="Sitio Web"   name="website"    placeholder="https://..." />
+          <Field label="Email"       name="email"      type="email" placeholder="contacto@negocio.com" />
           <Field label="Rango Precio" name="price_range" placeholder="$ / $$ / $$$ / $$$$" />
           <Field label="Estado"      name="status"     placeholder="Ej: open, closed" />
           <Field label="Zona Horaria" name="timezone"  placeholder="America/New_York" />

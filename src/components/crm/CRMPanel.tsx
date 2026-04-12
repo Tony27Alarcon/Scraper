@@ -1,11 +1,11 @@
 'use client'
 
 import { TrendingUp } from 'lucide-react'
-import { FavoriteButton } from './FavoriteButton'
-import { TemperatureBadge } from './TemperatureBadge'
-import { LeadScore } from './LeadScore'
-import { ReactionBar } from './ReactionBar'
-import { NotesThread } from './NotesThread'
+import { FavoriteButton }    from './FavoriteButton'
+import { TemperatureBadge }  from './TemperatureBadge'
+import { LeadScore }         from './LeadScore'
+import { ReactionBar }       from './ReactionBar'
+import { ActivityTimeline }  from './ActivityTimeline'
 
 interface CRMPanelProps {
   placeId:            string
@@ -62,12 +62,16 @@ export function CRMPanel({
           <ReactionBar placeId={placeId} initialReactions={initialReactions} size="md" />
         </div>
 
-        {/* Notes */}
+        {/* Timeline (actividades + notas) */}
         <div>
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Notas del equipo
+            Historial de actividades
           </p>
-          <NotesThread placeId={placeId} currentUserId={currentUserId} isAdmin={isAdmin} />
+          <ActivityTimeline
+            placeId={placeId}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+          />
         </div>
       </div>
     </div>

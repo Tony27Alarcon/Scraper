@@ -10,7 +10,7 @@ import { cn, formatRating } from '@/lib/utils'
 import { FavoriteButton }   from '@/components/crm/FavoriteButton'
 import { TemperatureBadge } from '@/components/crm/TemperatureBadge'
 import { LeadScore }        from '@/components/crm/LeadScore'
-import { NotesThread }      from '@/components/crm/NotesThread'
+import { ActivityTimeline } from '@/components/crm/ActivityTimeline'
 import { AddToListButton }  from '@/components/places/AddToListButton'
 
 interface PlaceData {
@@ -214,12 +214,12 @@ export function PlaceQuickView({ placeId, onClose, currentUserId, isAdmin }: Pla
                 </div>
               </div>
 
-              {/* Notas */}
+              {/* Timeline */}
               <div>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                  Notas del equipo
+                  Historial
                 </p>
-                <NotesThread
+                <ActivityTimeline
                   placeId={place.id}
                   currentUserId={currentUserId}
                   isAdmin={isAdmin}

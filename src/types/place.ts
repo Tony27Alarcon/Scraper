@@ -41,6 +41,7 @@ export interface Place {
   popular_times?:        any | null
   website?:              string | null
   phone?:                string | null
+  email?:                string | null
   plus_code?:            string | null
   review_count?:         number | null
   review_rating?:        number | string | null
@@ -83,6 +84,31 @@ export interface PlaceNote {
   content:    string
   created_at: string | Date
   updated_at: string | Date
+}
+
+export type ActivityType = 'call' | 'email' | 'whatsapp' | 'meeting' | 'contacted' | 'ai_action' | 'other'
+
+export interface PlaceActivity {
+  id:          number
+  place_id:    string
+  user_id:     number
+  username?:   string | null
+  type:        ActivityType | string
+  content?:    string | null
+  happened_at: string | Date
+  created_at:  string | Date
+}
+
+// Entrada unificada del timeline (actividades + notas)
+export interface TimelineEntry {
+  id:         number
+  kind:       'activity' | 'note'
+  type:       string
+  content?:   string | null
+  username?:  string | null
+  user_id:    number
+  date:       string | Date   // happened_at para actividades, created_at para notas
+  created_at: string | Date
 }
 
 export interface PlacesResponse {
