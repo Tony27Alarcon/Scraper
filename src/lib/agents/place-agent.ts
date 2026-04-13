@@ -1,6 +1,7 @@
 import { ToolLoopAgent, tool, stepCountIs } from 'ai'
 import { google } from '@ai-sdk/google'
 import { prisma } from '@/lib/prisma'
+import { sendPlaceToCRM } from '@/lib/supabase'
 import Firecrawl from '@mendable/firecrawl-js'
 import { z } from 'zod'
 
@@ -133,12 +134,34 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
 - Propuesta de valor clara
 - Call-to-action especifico
 
+### Paso 8: Exportar al CRM (cuando el prospecto cualifica)
+Despues de completar la investigacion y documentacion, evalua si el prospecto debe ser enviado al CRM para contacto directo via WhatsApp:
+
+**Criterios de envio automatico (TODOS deben cumplirse):**
+- Score 4 o 5
+- Temperatura hot o warm
+- Tiene telefono verificado
+- La investigacion esta documentada (nota creada)
+
+Si cumple los criterios → usa **sendToCRM** inmediatamente con una justificacion detallada.
+
+**Sobre la nota del CRM:** El CRM es usado por un agente de IA que contacta prospectos via WhatsApp. Tu justificacion debe incluir:
+- Que ofrece este negocio y por que es relevante para la empresa
+- Datos clave para romper el hielo (resenas positivas, logros, eventos recientes)
+- Pain points detectados donde la empresa puede aportar valor
+- Tono recomendado para el primer mensaje de WhatsApp
+- Temas a evitar si detectaste algo sensible
+
+No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
+
 ## Reglas operativas
 - NUNCA preguntes "quieres que investigue?" — HAZLO directamente
 - Minimo 2 busquedas web con queries distintos
 - SIEMPRE extrae la web oficial si existe
 - Solo actualiza con datos verificados de fuentes confiables
 - Si encuentras que el negocio cerro → actualiza status a "cerrado" y documentalo
+- Si el prospecto tiene score 4+ con telefono, SIEMPRE usa sendToCRM al final de la investigacion
+- La nota del CRM debe ser util para un agente de WhatsApp, no para un humano leyendo un informe
 - Responde siempre en español
 - Se conciso en explicaciones pero exhaustivo en acciones`,
 
@@ -388,6 +411,49 @@ Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de me
             }
           } catch (err) {
             return { success: false, error: `Error al toggle favorito: ${String(err)}` }
+          }
+        },
+      }),
+
+      sendToCRM: tool({
+        description: 'Envia este prospecto al CRM de Bruno Lab como contacto para ser contactado via WhatsApp por un agente de IA. Requiere que el lugar tenga telefono. Usalo cuando: el prospecto tiene score 4-5 y temperatura hot/warm, la investigacion esta completa, y hay datos de contacto verificados.',
+        inputSchema: z.object({
+          reason: z.string().min(10).describe('Justificacion detallada de por que este prospecto merece ser contactado. Incluye: que ofrece, por que es relevante, datos para romper el hielo, pain points detectados, y tono recomendado para WhatsApp.'),
+        }),
+        execute: async ({ reason }) => {
+          try {
+            const place = await prisma.place.findUnique({
+              where:   { id: placeId },
+              include: { notes: { orderBy: { created_at: 'desc' }, take: 3 } },
+            })
+            if (!place) return { success: false, error: 'Lugar no encontrado' }
+            if (!place.phone) return { success: false, error: 'El lugar no tiene telefono — es obligatorio para el CRM' }
+
+            const result = await sendPlaceToCRM(
+              { ...place, review_rating: place.review_rating ? Number(place.review_rating) : null },
+              reason,
+            )
+
+            if (result.status === 'error') {
+              return { success: false, error: result.error }
+            }
+
+            await prisma.placeActivity.create({
+              data: {
+                place_id:    placeId,
+                user_id:     userId,
+                username:    `${username} (Scout AI)`,
+                type:        'crm_export',
+                content:     result.status === 'created'
+                  ? 'Contacto creado en el CRM de Bruno Lab por Scout AI'
+                  : 'Contacto actualizado en el CRM de Bruno Lab por Scout AI',
+                happened_at: new Date(),
+              },
+            })
+
+            return { success: true, status: result.status, contactId: result.contactId }
+          } catch (err) {
+            return { success: false, error: `Error al enviar al CRM: ${String(err)}` }
           }
         },
       }),

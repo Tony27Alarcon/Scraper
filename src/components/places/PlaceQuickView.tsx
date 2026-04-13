@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  X, Phone, Globe, MapPin, Star, ExternalLink, Loader2,
+  X, Phone, Globe, Mail, MapPin, Star, ExternalLink, Loader2,
 } from 'lucide-react'
 import { cn, formatRating } from '@/lib/utils'
 import { FavoriteButton }   from '@/components/crm/FavoriteButton'
@@ -12,6 +12,7 @@ import { TemperatureBadge } from '@/components/crm/TemperatureBadge'
 import { LeadScore }        from '@/components/crm/LeadScore'
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline'
 import { AddToListButton }  from '@/components/places/AddToListButton'
+import { SendToCRMButton }  from '@/components/places/SendToCRMButton'
 
 interface PlaceData {
   id:               string
@@ -20,6 +21,7 @@ interface PlaceData {
   address:          string | null
   phone:            string | null
   website:          string | null
+  email:            string | null
   review_rating:    number | null
   review_count:     number | null
   thumbnail:        string | null
@@ -181,6 +183,14 @@ export function PlaceQuickView({ placeId, onClose, currentUserId, isAdmin }: Pla
                     </a>
                   </div>
                 )}
+                {place.email && (
+                  <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                    <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <a href={`mailto:${place.email}`} className="text-brand-600 hover:underline truncate">
+                      {place.email}
+                    </a>
+                  </div>
+                )}
                 {place.address && (
                   <div className="flex items-start gap-1.5 text-sm text-gray-600">
                     <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
@@ -211,6 +221,7 @@ export function PlaceQuickView({ placeId, onClose, currentUserId, isAdmin }: Pla
                     size="sm"
                   />
                   <AddToListButton placeId={place.id} size="sm" />
+                  <SendToCRMButton placeId={place.id} size="sm" />
                 </div>
               </div>
 

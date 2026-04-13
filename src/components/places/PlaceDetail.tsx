@@ -85,6 +85,14 @@ export function PlaceDetail({ place }: PlaceDetailProps) {
               {place.address}
             </p>
           )}
+          {place.email && (
+            <p className="flex items-center gap-1.5 mt-2 text-sm text-gray-600">
+              <Mail className="w-4 h-4 shrink-0 text-gray-400" />
+              <a href={`mailto:${place.email}`} className="text-brand-600 hover:underline">
+                {place.email}
+              </a>
+            </p>
+          )}
           {place.review_rating && (
             <div className="flex items-center gap-1 mt-2">
               <Star className="w-4 h-4 text-amber-400 fill-amber-400" />

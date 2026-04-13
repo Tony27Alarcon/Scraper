@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { AddToListButton } from '@/components/places/AddToListButton'
+import { SendToCRMButton } from '@/components/places/SendToCRMButton'
 
 export default async function PlaceDetailPage({
   params,
@@ -115,6 +116,7 @@ export default async function PlaceDetailPage({
         {/* Acciones de la derecha */}
         <div className="flex items-center gap-2 shrink-0">
           <AddToListButton placeId={place.id} />
+          <SendToCRMButton placeId={place.id} />
           {isAdmin && (
             <Link href={`/places/${place.id}/edit`} className="btn-primary">
               <Pencil className="w-4 h-4" />

@@ -1,6 +1,7 @@
 import { ToolLoopAgent, tool, stepCountIs } from 'ai'
 import { google } from '@ai-sdk/google'
 import { prisma } from '@/lib/prisma'
+import { sendPlaceToCRM } from '@/lib/supabase'
 import { Prisma } from '@prisma/client'
 import Firecrawl from '@mendable/firecrawl-js'
 import { z } from 'zod'
@@ -93,6 +94,8 @@ Cuando evalues un negocio, analiza estas 5 dimensiones:
 6. **Si encuentras la web oficial de un negocio** → Siempre haz scrapePage para extraer info completa. No te conformes solo con el snippet de Google.
 7. **Si el usuario esta en la pagina de un lugar (/places/[id])** → Usa ese ID directamente, no preguntes cual lugar quiere ver.
 8. **Si encuentras oportunidades o patrones en los datos** → Mencionalo proactivamente. "Ojo: hay 45 restaurantes en Lima sin telefono — quieres que investigue los top 10?"
+9. **Si identificas prospectos top (score 4-5, hot/warm, con telefono)** → Envialos al CRM con sendToCRM. Incluye contexto que ayude al agente de WhatsApp a tener una conversacion informada y personalizada.
+10. **Si el usuario dice "envia los mejores al CRM"** → Usa searchPlaces para encontrar los top leads con telefono, y usa bulkSendToCRM para enviarlos.
 
 ## Formato de notas de investigacion
 
@@ -645,6 +648,101 @@ Cuando el usuario pida redactar un mensaje de acercamiento, pitch o copy:
             }))
           } catch (err) {
             return { error: `Error al obtener listas: ${String(err)}` }
+          }
+        },
+      }),
+
+      sendToCRM: tool({
+        description: 'Envia un prospecto al CRM de Bruno Lab para ser contactado via WhatsApp por un agente de IA. Requiere que el lugar tenga telefono. Usalo despues de investigar un lugar score 4+ con datos completos.',
+        inputSchema: z.object({
+          placeId: z.string().describe('ID del lugar a enviar al CRM'),
+          reason:  z.string().min(10).describe('Justificacion detallada: que ofrece, por que es relevante, datos para romper el hielo, pain points, tono recomendado para WhatsApp.'),
+        }),
+        execute: async ({ placeId, reason }) => {
+          try {
+            const place = await prisma.place.findUnique({
+              where:   { id: placeId },
+              include: { notes: { orderBy: { created_at: 'desc' }, take: 3 } },
+            })
+            if (!place) return { success: false, error: 'Lugar no encontrado' }
+            if (!place.phone) return { success: false, error: 'El lugar no tiene telefono — es obligatorio para el CRM' }
+
+            const result = await sendPlaceToCRM(
+              { ...place, review_rating: place.review_rating ? Number(place.review_rating) : null },
+              reason,
+            )
+
+            if (result.status === 'error') return { success: false, error: result.error }
+
+            await prisma.placeActivity.create({
+              data: {
+                place_id:    placeId,
+                user_id:     userId,
+                username:    `${username} (Atlas AI)`,
+                type:        'crm_export',
+                content:     result.status === 'created'
+                  ? 'Contacto creado en el CRM de Bruno Lab por Atlas AI'
+                  : 'Contacto actualizado en el CRM de Bruno Lab por Atlas AI',
+                happened_at: new Date(),
+              },
+            })
+
+            return { success: true, status: result.status, contactId: result.contactId }
+          } catch (err) {
+            return { success: false, error: `Error al enviar al CRM: ${String(err)}` }
+          }
+        },
+      }),
+
+      bulkSendToCRM: tool({
+        description: 'Envia multiples prospectos al CRM de Bruno Lab de una vez. Solo los que tengan telefono seran enviados. Usalo para exportar lotes de prospectos top al CRM.',
+        inputSchema: z.object({
+          placeIds: z.array(z.string()).min(1).max(50).describe('IDs de los lugares a enviar'),
+          reason:   z.string().min(10).describe('Justificacion general del lote: por que estos prospectos merecen ser contactados.'),
+        }),
+        execute: async ({ placeIds, reason }) => {
+          try {
+            const places = await prisma.place.findMany({
+              where:   { id: { in: placeIds } },
+              include: { notes: { orderBy: { created_at: 'desc' }, take: 3 } },
+            })
+
+            const withPhone = places.filter(p => p.phone)
+            let sent = 0, updated = 0, failed = 0
+
+            for (const place of withPhone) {
+              const result = await sendPlaceToCRM(
+                { ...place, review_rating: place.review_rating ? Number(place.review_rating) : null },
+                reason,
+              )
+              if (result.status === 'created') sent++
+              else if (result.status === 'updated') updated++
+              else failed++
+            }
+
+            if (sent + updated > 0) {
+              await prisma.placeActivity.createMany({
+                data: withPhone.slice(0, sent + updated).map(p => ({
+                  place_id:    p.id,
+                  user_id:     userId,
+                  username:    `${username} (Atlas AI)`,
+                  type:        'crm_export',
+                  content:     'Exportado al CRM de Bruno Lab por Atlas AI (acción masiva)',
+                  happened_at: new Date(),
+                })),
+              })
+            }
+
+            return {
+              success: true,
+              sent,
+              updated,
+              failed,
+              skipped: places.length - withPhone.length,
+              total:   places.length,
+            }
+          } catch (err) {
+            return { success: false, error: `Error en envio masivo al CRM: ${String(err)}` }
           }
         },
       }),

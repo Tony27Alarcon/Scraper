@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   Pencil, Trash2, Star, ChevronLeft, ChevronRight,
-  Globe, Phone, ArrowUp, ArrowDown, ArrowUpDown,
+  Globe, Phone, Mail, ArrowUp, ArrowDown, ArrowUpDown,
   ExternalLink, Thermometer, Hash, X,
 } from 'lucide-react'
 import { Place } from '@/types/place'
@@ -15,6 +15,7 @@ import { TemperatureBadge }  from '@/components/crm/TemperatureBadge'
 import { LeadScore }         from '@/components/crm/LeadScore'
 import { AgentQuickActions } from '@/components/places/AgentQuickActions'
 import { AddToListButton }   from '@/components/places/AddToListButton'
+import { SendToCRMButton }   from '@/components/places/SendToCRMButton'
 import { PlaceQuickView }    from '@/components/places/PlaceQuickView'
 import { useToast }          from '@/components/ui/ToastProvider'
 
@@ -299,6 +300,18 @@ export function PlacesTable({
                             {place.website.replace(/^https?:\/\//, '')}
                           </div>
                         )}
+                        {place.email && (
+                          <div className="flex items-center gap-1 text-xs text-gray-600">
+                            <Mail className="w-3 h-3 shrink-0" />
+                            <a
+                              href={`mailto:${place.email}`}
+                              onClick={e => e.stopPropagation()}
+                              className="truncate max-w-[150px] hover:text-brand-600 transition-colors"
+                            >
+                              {place.email}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -349,6 +362,7 @@ export function PlacesTable({
                           <AgentQuickActions placeId={place.id!} />
                         </div>
                         <AddToListButton placeId={place.id!} size="sm" />
+                        <SendToCRMButton placeId={place.id!} size="sm" />
                         <Link
                           href={detailUrl(place, index)}
                           onClick={e => e.stopPropagation()}
@@ -512,6 +526,7 @@ export function PlacesTable({
 
           {/* Añadir a lista bulk */}
           <AddToListButton placeIds={Array.from(selectedIds)} size="md" />
+          <SendToCRMButton placeIds={Array.from(selectedIds)} size="md" />
 
           <div className="h-4 w-px bg-gray-200" />
           <button

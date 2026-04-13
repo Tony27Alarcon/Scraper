@@ -51,6 +51,7 @@ async function getPlaces(params: SearchParams, userId: number) {
       { address:  { contains: search, mode: 'insensitive' } },
       { category: { contains: search, mode: 'insensitive' } },
       { phone:    { contains: search, mode: 'insensitive' } },
+      { email:    { contains: search, mode: 'insensitive' } },
     ]
   }
   if (category)          whereBase.category      = { equals: category, mode: 'insensitive' }
@@ -90,6 +91,7 @@ async function getPlaces(params: SearchParams, userId: number) {
         status:           true,
         thumbnail:        true,
         website:          true,
+        email:            true,
         created_at:       true,
         lead_score:       true,
         lead_temperature: true,
