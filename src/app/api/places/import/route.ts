@@ -21,6 +21,14 @@ function parseJsonField(raw: string | undefined): { value: unknown; error: strin
   }
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Extrae emails válidos de un string con uno o varios emails separados por coma/espacio */
+function parseEmailsRaw(raw: string | undefined): string[] {
+  if (!raw?.trim()) return []
+  return raw.split(/[,;\s]+/).map(s => s.trim()).filter(s => EMAIL_RE.test(s))
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') {
@@ -84,8 +92,20 @@ export async function POST(req: NextRequest) {
     // batch_tag del formulario sobreescribe el del CSV (si se envió uno)
     if (batchTag) payload['batch_tag'] = batchTag
 
+    // Tratar "emails" aparte: si viene como texto plano con emails,
+    // extraer el primero al campo `email` y guardar todos como JSON array
+    if (raw['emails'] && !raw['emails'].trim().startsWith('[') && !raw['emails'].trim().startsWith('{')) {
+      const extracted = parseEmailsRaw(raw['emails'])
+      if (extracted.length > 0) {
+        if (!payload['email']) payload['email'] = extracted[0]
+        payload['emails'] = extracted
+      }
+      delete raw['emails'] // ya procesado, no pasar al loop JSON
+    }
+
     let hasJsonError = false
     for (const field of JSON_FIELDS) {
+      if (field === 'emails' && payload['emails'] !== undefined) continue // ya procesado arriba
       const { value, error } = parseJsonField(raw[field])
       if (error) {
         errors.push({ row: rowNum, message: `Campo "${field}": ${error}` })
