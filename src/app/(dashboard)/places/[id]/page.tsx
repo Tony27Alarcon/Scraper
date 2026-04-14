@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { PlaceDetail } from '@/components/places/PlaceDetail'
 import { CRMPanel }    from '@/components/crm/CRMPanel'
-import { AgentChat }   from '@/components/places/AgentChat'
 import { notFound }    from 'next/navigation'
 import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import Link from 'next/link'
@@ -72,7 +71,7 @@ export default async function PlaceDetailPage({
               href={backUrl}
               className="text-gray-500 hover:text-brand-600 transition-colors shrink-0"
             >
-              Lugares
+              Prospectos
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />
             <span className="text-gray-900 font-medium truncate">
@@ -87,7 +86,7 @@ export default async function PlaceDetailPage({
                 <Link
                   href={navUrl(searchParams.prev)}
                   className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                  title="Lugar anterior"
+                  title="Prospecto anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Link>
@@ -100,7 +99,7 @@ export default async function PlaceDetailPage({
                 <Link
                   href={navUrl(searchParams.next)}
                   className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                  title="Siguiente lugar"
+                  title="Siguiente prospecto"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Link>
@@ -138,8 +137,6 @@ export default async function PlaceDetailPage({
           initialReactions={initialReactions}
         />
       </div>
-
-      <AgentChat placeId={place.id} />
     </div>
   )
 }

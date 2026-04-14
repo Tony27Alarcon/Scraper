@@ -19,7 +19,7 @@ export default async function EditPlacePage({
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Editar Lugar</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Editar Prospecto</h1>
           <p className="text-gray-500 mt-0.5 truncate max-w-md">{place.title}</p>
         </div>
       </div>

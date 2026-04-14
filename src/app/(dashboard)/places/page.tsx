@@ -174,9 +174,9 @@ export default async function PlacesPage({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lugares</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Prospectos</h1>
           <p className="text-gray-500 mt-0.5">
-            {result.total.toLocaleString('es-ES')} lugares encontrados
+            {result.total.toLocaleString('es-ES')} prospectos en la base
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ export default async function PlacesPage({
               <ImportCSVButton />
               <Link href="/places/new" className="btn-primary">
                 <Plus className="w-4 h-4" />
-                Nuevo Lugar
+                Nuevo Prospecto
               </Link>
             </>
           )}

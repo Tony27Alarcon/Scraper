@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, MapPin, Users, Building2, ListChecks, ExternalLink } from 'lucide-react'
+import { LayoutDashboard, Target, Megaphone, FileText, Users, Building2, ListChecks, ExternalLink, Rocket } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
@@ -11,10 +11,12 @@ interface SidebarProps {
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard, adminOnly: false },
-  { href: '/places',    label: 'Lugares',     icon: MapPin,          adminOnly: false },
-  { href: '/prospects', label: 'Prospectos',  icon: ListChecks,      adminOnly: false },
-  { href: '/companies', label: 'Empresas',    icon: Building2,       adminOnly: true  },
-  { href: '/users',     label: 'Usuarios',    icon: Users,           adminOnly: true  },
+  { href: '/places',    label: 'Prospectos', icon: Target,          adminOnly: false },
+  { href: '/campaigns', label: 'Campañas',   icon: Megaphone,       adminOnly: false },
+  { href: '/templates', label: 'Plantillas', icon: FileText,        adminOnly: false },
+  { href: '/prospects', label: 'Listas',     icon: ListChecks,      adminOnly: false },
+  { href: '/companies', label: 'Empresas',   icon: Building2,       adminOnly: true  },
+  { href: '/users',     label: 'Usuarios',   icon: Users,           adminOnly: true  },
 ]
 
 export function Sidebar({ role }: SidebarProps) {
@@ -25,9 +27,12 @@ export function Sidebar({ role }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-200">
         <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-          <MapPin className="w-4 h-4 text-white" />
+          <Rocket className="w-4 h-4 text-white" />
         </div>
-        <span className="font-bold text-gray-900">Scraper</span>
+        <div className="min-w-0">
+          <span className="block font-bold text-gray-900 leading-tight">Closer</span>
+          <span className="block text-[10px] text-gray-500 leading-tight">Cold Outreach Suite</span>
+        </div>
       </div>
 
       {/* Navigation */}

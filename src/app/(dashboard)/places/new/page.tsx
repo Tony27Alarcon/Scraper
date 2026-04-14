@@ -10,8 +10,8 @@ export default function NewPlacePage() {
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nuevo Lugar</h1>
-          <p className="text-gray-500 mt-0.5">Agregar un lugar scrapeado</p>
+          <h1 className="text-2xl font-bold text-gray-900">Nuevo Prospecto</h1>
+          <p className="text-gray-500 mt-0.5">Crear un prospecto manualmente</p>
         </div>
       </div>
       <PlaceForm mode="create" />
