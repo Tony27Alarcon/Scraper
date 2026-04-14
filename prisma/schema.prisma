@@ -49,11 +49,22 @@ model User {
 }
 
 model ProspectList {
-  id          String   @id @default(cuid())
-  name        String
-  description String?  @db.Text
-  created_by  Int
-  created_at  DateTime @default(now())
+  id               String    @id @default(cuid())
+  name             String
+  description      String?   @db.Text
+  created_by       Int
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  // Campaign fields (is_campaign=true transforms a list into a cold-outreach campaign)
+  is_campaign      Boolean   @default(false)
+  channel          String?   // whatsapp | email | phone | multi
+  status           String    @default("draft") // draft | active | paused | done | archived
+  goal             String?   @db.Text
+  message_template Json?     // [{ step, delay_days, channel, subject?, body, cta }]
+  scheduled_at     DateTime?
+  started_at       DateTime?
+  ended_at         DateTime?
 
   user  User               @relation(fields: [created_by], references: [id])
   items ProspectListItem[]
@@ -63,17 +74,46 @@ model ProspectList {
 }
 
 model ProspectListItem {
-  id       Int    @id @default(autoincrement())
-  list_id  String
-  place_id String
-  rank     Int?
-  reason   String? @db.Text
+  id                Int       @id @default(autoincrement())
+  list_id           String
+  place_id          String
+  rank              Int?
+  reason            String?   @db.Text
+
+  // Pipeline stage tracking (for campaigns)
+  stage             String    @default("queued") // queued | contacted | replied | interested | won | lost
+  last_contacted_at DateTime?
+  reply_at          DateTime?
+  outcome           String?   // positive | negative | no_reply
+  next_action_at    DateTime?
 
   list  ProspectList @relation(fields: [list_id],  references: [id], onDelete: Cascade)
   place Place        @relation(fields: [place_id], references: [id], onDelete: Cascade)
 
   @@unique([list_id, place_id])
+  @@index([list_id, stage])
   @@map("prospect_list_items")
+  @@schema("scraper")
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  channel     String   // whatsapp | email | phone
+  subject     String?
+  body        String   @db.Text
+  variables   Json?    // merge vars detectadas: ["title","city",...]
+  framework   String?  // AIDA | PAS | BAB | QVC | SPIN | CHALLENGER
+  tone        String?  // formal | cercano | disruptivo | consultivo
+  performance Json?    // { sends, replies, positive }
+  owner_id    Int
+  company_id  String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([owner_id])
+  @@index([company_id])
+  @@map("message_templates")
   @@schema("scraper")
 }
 
@@ -181,12 +221,17 @@ model PlaceActivity {
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id     Int
   username    String?
-  type        String   // call | email | whatsapp | meeting | contacted | ai_action | other
+  type        String   // call | email | whatsapp | meeting | contacted | ai_action | campaign_send | campaign_reply | campaign_bounce | template_generated | sequence_step | other
   content     String?  @db.Text
   happened_at DateTime @default(now())
   created_at  DateTime @default(now())
 
+  // Link to campaign (ProspectList with is_campaign=true) when activity is campaign-driven
+  campaign_id String?
+  step_index  Int?
+
   @@index([place_id, happened_at(sort: Desc)])
+  @@index([campaign_id, happened_at(sort: Desc)])
   @@map("place_activities")
   @@schema("scraper")
 }

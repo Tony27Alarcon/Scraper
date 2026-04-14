@@ -21,7 +21,9 @@
       "Bash(xargs cat:*)",
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Skill(firecrawl)",
+      "Bash(git -C /c/Users/Usuario/Desktop/dev/Scraper log --all --oneline --grep=\"lateral\")"
     ]
   }
 }

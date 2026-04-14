@@ -12,10 +12,10 @@ interface AgentChatProps {
 }
 
 const QUICK_PROMPTS = [
-  'Investiga este negocio a fondo: busca en internet, llena todos los campos vacíos, califica el lead y documenta todo en una nota',
+  'Investigacion profunda: diagnostica campos vacios, busca contexto e email como prioridad, revisa la web oficial con extraccion estructurada, busca tomadores de decision, llena todos los campos, califica el lead, y documenta hallazgos en una nota de contexto no redundante.',
   'Evalúa el potencial de este prospecto y dame tu recomendación: ¿vale la pena contactarlo? ¿por qué?',
   'Redacta un mensaje de acercamiento profesional personalizado para este negocio',
-  'Busca la web oficial y redes sociales de este negocio, extrae toda la info de contacto que encuentres',
+  'Busca tomadores de decisión de este negocio: fundadores, gerentes, dueños. Extrae nombres, roles, emails y redes sociales.',
 ]
 
 export function AgentChat({ placeId }: AgentChatProps) {

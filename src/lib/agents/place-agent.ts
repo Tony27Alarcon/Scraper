@@ -52,11 +52,11 @@ ${companySection}
 
 **Eres un detective comercial.** No te conformas con el primer resultado de Google — cruzas fuentes, verificas datos, buscas en la web oficial, redes sociales, directorios y resenas. Si un dato no cuadra, lo señalas.
 
-**Eres un enriquecedor obsesivo.** Si un campo esta vacio y la informacion existe online, lo llenas. Telefono, email, web, descripcion, ciudad, pais, rango de precios — TODO lo que encuentres se actualiza.
+**Eres un enriquecedor obsesivo.** Si un campo esta vacio y la informacion existe online, lo llenas. Telefono, email, web, descripcion, ciudad, pais, rango de precios — TODO lo que encuentres se actualiza. **El email es prioridad maxima** — buscalo en la web oficial, en paginas de contacto, en directorios, en redes sociales.
 
 **Eres un evaluador critico.** No regalas scores altos. Un score 5 es para negocios excepcionales que cumplen todos los criterios. Justifica cada calificacion con datos concretos.
 
-**Eres un copywriter estrategico.** Cuando redactas notas o mensajes, piensas en quien los va a leer (el equipo de ventas) y que necesitan saber para actuar.
+**Eres un cazador de tomadores de decision.** Siempre buscas quien es el dueño, fundador, gerente o persona clave del negocio. Nombres, roles, emails personales, perfiles de LinkedIn — todo suma para el equipo de ventas.
 
 ## Proceso de investigacion — EJECUTA TODOS LOS PASOS
 
@@ -65,23 +65,28 @@ No esperes instrucciones para cada paso. Cuando el usuario dice "investiga", eje
 ### Paso 1: Diagnostico inicial
 → **getPlaceInfo** — Lee el estado actual. Identifica TODOS los campos vacios. Revisa notas previas para no repetir trabajo.
 
-### Paso 2: Investigacion web intensiva (MINIMO 2 busquedas)
-→ **searchWeb** con queries variados:
-  - "[nombre] [ciudad] telefono contacto email"
+### Paso 2: Investigacion web profunda (MINIMO 2 busquedas)
+→ **deepSearch** con queries variados y scraping incluido:
+  - "[nombre] [ciudad] contacto email telefono" — PRIORIDAD: conseguir email
   - "[nombre] [ciudad] sitio web oficial"
-  - "[nombre] [ciudad] resenas opiniones"
-  - "[nombre] [ciudad] [industria relevante]" (si aplica al perfil de empresa)
+  - "[nombre] [ciudad] fundador dueño gerente equipo" — para tomadores de decision
+  - "[nombre] [ciudad] [industria]" (si aplica al perfil de empresa)
 
-### Paso 3: Extraccion profunda
-→ **scrapePage** en TODA web oficial, perfil de redes, o directorio que encuentres. No te conformes con snippets — extrae la pagina completa. Busca:
-  - Datos de contacto (telefono, email, formulario)
-  - Servicios/productos ofrecidos
-  - Rango de precios
-  - Señales de inversion (web profesional, reservas online, multiples ubicaciones)
-  - Informacion del dueño/equipo
+Usa **deepSearch** en vez de searchWeb cuando necesites contenido completo de las paginas encontradas (trae markdown de cada resultado). Usa **searchWeb** solo para busquedas rapidas donde no necesites el contenido.
+
+### Paso 3: Investigacion profunda con Firecrawl Agent
+→ **firecrawlAgent** — Tu herramienta mas poderosa. NO necesita URLs — busca autonomamente en la web. Usala para:
+  - Encontrar emails de contacto del negocio
+  - Encontrar tomadores de decision: fundadores, gerentes, dueños, con nombres y roles
+  - Encontrar redes sociales y perfiles publicos
+  - Cualquier dato dificil de encontrar con busquedas normales
+
+Ejemplo de prompt: "Encuentra el email de contacto, fundador o dueño, y redes sociales de [nombre] en [ciudad]"
+
+Complementa con **scrapePage** en la web oficial o paginas especificas que ya tengas.
 
 ### Paso 4: Enriquecimiento total
-→ **updatePlace** con TODOS los datos encontrados en una sola llamada. No dejes nada sin actualizar.
+→ **updatePlace** con TODOS los datos encontrados en una sola llamada. No dejes nada sin actualizar. **El email es prioridad** — si lo encontraste, actualizalo primero.
 
 ### Paso 5: Evaluacion y calificacion
 → **setPriority** basado en estas 5 dimensiones:
@@ -99,32 +104,29 @@ No esperes instrucciones para cada paso. Cuando el usuario dice "investiga", eje
 - **warm** = Score 3-4 + datos parciales → investigar mas o hacer seguimiento
 - **cold** = Score 1-2 + mal fit o datos insuficientes → baja prioridad
 
-### Paso 6: Documentacion
-→ **addNote** con formato estructurado:
+### Paso 6: Documentacion — Nota de contexto NO REDUNDANTE
+→ **addNote** con informacion que NO este ya en los campos del lugar. La nota debe aportar valor agregado:
 
 ---
-📋 **Investigacion: [Nombre]**
+📋 **Contexto: [Nombre]**
 📅 Fecha: [hoy]
-🔍 Fuentes consultadas: [URLs]
 
-**Hallazgos clave:**
-- [dato relevante 1]
-- [dato relevante 2]
+**Tomadores de decision:**
+- [Nombre] — [Rol] — [Email/LinkedIn si disponible]
 
-**Datos actualizados:**
-- [campo]: [valor anterior o "vacio"] → [nuevo valor]
+**Contexto del negocio** (lo que NO esta en los campos):
+- [Insight relevante 1: historia, logros, eventos recientes]
+- [Insight relevante 2: pain points, oportunidades]
 
 **Evaluacion (Score X/5 | Temperatura: X):**
-- Presencia digital: [evaluacion]
-- Reputacion: [evaluacion]
-- Contactabilidad: [evaluacion]
-- Señales de inversion: [evaluacion]
-- Fit con empresa: [evaluacion]
+- [Justificacion breve de la calificacion]
 
 **Proximos pasos recomendados:**
 - [accion concreta 1]
 - [accion concreta 2]
 ---
+
+**IMPORTANTE:** NO repitas en la nota datos que ya estan en los campos (telefono, email, web, direccion, descripcion). La nota es para CONTEXTO ESTRATEGICO: tomadores de decision, insights, evaluacion, recomendaciones.
 
 ### Paso 7 (si aplica): Borrador de outreach
 Si el prospecto es score 4+ y hot/warm, redacta proactivamente un borrador de mensaje de acercamiento como nota adicional:
@@ -157,11 +159,13 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
 ## Reglas operativas
 - NUNCA preguntes "quieres que investigue?" — HAZLO directamente
 - Minimo 2 busquedas web con queries distintos
-- SIEMPRE extrae la web oficial si existe
+- SIEMPRE usa firecrawlAgent para buscar emails y tomadores de decision — es mas poderoso que busquedas manuales
 - Solo actualiza con datos verificados de fuentes confiables
 - Si encuentras que el negocio cerro → actualiza status a "cerrado" y documentalo
 - Si el prospecto tiene score 4+ con telefono, SIEMPRE usa sendToCRM al final de la investigacion
 - La nota del CRM debe ser util para un agente de WhatsApp, no para un humano leyendo un informe
+- **El email es el dato de contacto mas valioso despues del telefono — buscalo obsesivamente**
+- **Siempre busca tomadores de decision: nombres, roles, emails, LinkedIn**
 - Responde siempre en español
 - Se conciso en explicaciones pero exhaustivo en acciones`,
 
@@ -236,7 +240,7 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
       }),
 
       searchWeb: tool({
-        description: 'Busca informacion en internet sobre el lugar. Haz MULTIPLES busquedas con queries diferentes para maximizar cobertura: una para contacto, otra para web oficial, otra para resenas/reputacion. No te limites a una sola busqueda.',
+        description: 'Busqueda web rapida — devuelve snippets sin contenido completo. Usala para busquedas exploratorias rapidas. Para busquedas donde necesites el contenido completo de las paginas, usa deepSearch en su lugar.',
         inputSchema: z.object({
           query: z.string().describe('Query especifica y contextualizada. Incluye nombre + ciudad + lo que buscas.'),
           limit: z.number().min(1).max(10).default(5).describe('Resultados maximos'),
@@ -271,8 +275,47 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
         },
       }),
 
+      deepSearch: tool({
+        description: 'Busqueda web profunda con scraping incluido — devuelve el contenido markdown completo de cada pagina encontrada. Ideal para buscar emails, datos de contacto, tomadores de decision, y cualquier informacion que requiera leer el contenido de las paginas. Mas poderosa que searchWeb pero consume mas creditos.',
+        inputSchema: z.object({
+          query: z.string().describe('Query especifica. Incluye nombre + ciudad + lo que buscas (ej: "Restaurante Miraflores Lima contacto email fundador").'),
+          limit: z.number().min(1).max(5).default(3).describe('Resultados maximos (cada uno se scrapea, maximo 5)'),
+        }),
+        execute: async ({ query, limit }) => {
+          try {
+            const fc = getFirecrawl()
+            const result = await fc.search(query, {
+              limit,
+              scrapeOptions: { formats: ['markdown'], onlyMainContent: true },
+            })
+            const items = result.web ?? []
+            return {
+              query,
+              totalResults: items.length,
+              results: items.map((item) => {
+                const r = item as {
+                  url?: string
+                  title?: string
+                  description?: string
+                  markdown?: string
+                  metadata?: { title?: string; description?: string }
+                }
+                return {
+                  url:         r.url ?? '',
+                  title:       r.title ?? r.metadata?.title ?? '',
+                  description: r.description ?? r.metadata?.description ?? '',
+                  content:     (r.markdown ?? '').slice(0, 3000),
+                }
+              }),
+            }
+          } catch (err) {
+            return { error: `Error en busqueda profunda: ${String(err)}`, query, results: [] }
+          }
+        },
+      }),
+
       scrapePage: tool({
-        description: 'Extrae contenido completo de una URL. SIEMPRE usala en la web oficial del negocio si la encuentras — ahi esta la mejor info de contacto, servicios y precios. Tambien util para redes sociales, Google Maps, directorios y paginas de resenas.',
+        description: 'Extrae contenido completo de una URL en markdown. Usala en webs oficiales, paginas de contacto, paginas "sobre nosotros" o "equipo", perfiles de redes sociales, y directorios.',
         inputSchema: z.object({
           url: z.string().url().describe('URL de la pagina a extraer'),
         }),
@@ -288,6 +331,50 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
             }
           } catch (err) {
             return { error: `Error al extraer pagina: ${String(err)}`, url }
+          }
+        },
+      }),
+
+      firecrawlAgent: tool({
+        description: 'Agente de IA autonomo que busca, navega y extrae datos estructurados de la web. NO necesita URLs — solo describe que datos necesitas. Es la herramienta mas poderosa para: encontrar emails, tomadores de decision (fundadores, gerentes, dueños), redes sociales, y datos dificiles de encontrar. Devuelve datos estructurados.',
+        inputSchema: z.object({
+          prompt: z.string().describe('Descripcion en lenguaje natural de lo que necesitas. Ej: "Encuentra el email de contacto, el fundador o dueño, y redes sociales de Restaurante La Mar en Lima, Peru"'),
+          urls:   z.array(z.string().url()).optional().describe('URLs opcionales para enfocar la busqueda (ej: web oficial del negocio). Si no se proporcionan, el agente busca autonomamente.'),
+        }),
+        execute: async ({ prompt, urls }) => {
+          try {
+            const fc = getFirecrawl()
+            const result = await fc.agent({
+              prompt,
+              urls:       urls ?? undefined,
+              model:      'spark-1-mini',
+              maxCredits: 100,
+              schema: z.object({
+                emails:       z.array(z.string()).describe('Todos los emails encontrados'),
+                phones:       z.array(z.string()).describe('Todos los telefonos encontrados'),
+                website:      z.string().optional().describe('Sitio web oficial'),
+                socialMedia:  z.array(z.object({
+                  platform: z.string().describe('Nombre de la red social'),
+                  url:      z.string().describe('URL del perfil'),
+                })).describe('Perfiles de redes sociales'),
+                decisionMakers: z.array(z.object({
+                  name:       z.string().describe('Nombre completo'),
+                  role:       z.string().optional().describe('Cargo o rol'),
+                  email:      z.string().optional().describe('Email personal o de trabajo'),
+                  linkedin:   z.string().optional().describe('URL de perfil LinkedIn'),
+                })).describe('Tomadores de decision: fundadores, gerentes, dueños'),
+                description:  z.string().optional().describe('Descripcion breve del negocio'),
+                priceRange:   z.string().optional().describe('Rango de precios: $, $$, $$$ o $$$$'),
+              }),
+            })
+            return {
+              success:    result.success ?? false,
+              status:     result.status ?? 'unknown',
+              data:       result.data ?? null,
+              creditsUsed: (result as unknown as Record<string, unknown>).creditsUsed ?? null,
+            }
+          } catch (err) {
+            return { error: `Error en Firecrawl Agent: ${String(err)}` }
           }
         },
       }),
@@ -347,9 +434,9 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
       }),
 
       addNote: tool({
-        description: 'Crea una nota visible para todo el equipo. Usala para: documentar investigaciones (formato estructurado), redactar borradores de outreach/pitch personalizados, registrar decisiones, o dejar instrucciones. Las notas son el historial de inteligencia — hacelas valiosas y accionables.',
+        description: 'Crea una nota visible para todo el equipo. IMPORTANTE: la nota debe ser de CONTEXTO ESTRATEGICO — NO repitas datos que ya estan en los campos del lugar (telefono, email, web, direccion). Incluye: tomadores de decision, insights del negocio, evaluacion, recomendaciones de accion.',
         inputSchema: z.object({
-          content: z.string().min(20).describe('Contenido de la nota. Para investigaciones: formato estructurado con hallazgos, fuentes y evaluacion. Para outreach: mensaje personalizado con gancho y CTA.'),
+          content: z.string().min(20).describe('Nota de contexto no redundante. Incluye tomadores de decision, insights estrategicos, evaluacion y proximos pasos.'),
         }),
         execute: async ({ content }) => {
           try {
@@ -369,9 +456,9 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
       }),
 
       addActivity: tool({
-        description: 'Registra una actividad de IA en el historial del lugar. Usala cuando: completes una investigacion importante, encuentres datos clave, o tomes una accion relevante que el equipo deba conocer. Esto queda como historial visible para todo el equipo.',
+        description: 'Registra una actividad de IA en el historial del lugar. Usala cuando: completes una investigacion importante, encuentres datos clave, o tomes una accion relevante que el equipo deba conocer.',
         inputSchema: z.object({
-          content: z.string().min(10).describe('Descripcion de la accion realizada o hallazgo encontrado. Sé concreto y util para el equipo.'),
+          content: z.string().min(10).describe('Descripcion de la accion realizada o hallazgo encontrado.'),
         }),
         execute: async ({ content }) => {
           try {
@@ -393,7 +480,7 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
       }),
 
       toggleFavorite: tool({
-        description: 'Marca o desmarca este lugar como favorito. Usalo cuando: el usuario lo pida, o cuando identifiques un prospecto excepcional (score 5, hot) para sugerir marcarlo.',
+        description: 'Marca o desmarca este lugar como favorito. Usalo cuando el usuario lo pida o cuando identifiques un prospecto excepcional (score 5, hot).',
         inputSchema: z.object({}),
         execute: async () => {
           try {
@@ -416,9 +503,9 @@ No envies prospectos con score 1-2 o temperatura cold al CRM — seria spam.
       }),
 
       sendToCRM: tool({
-        description: 'Envia este prospecto al CRM de Bruno Lab como contacto para ser contactado via WhatsApp por un agente de IA. Requiere que el lugar tenga telefono. Usalo cuando: el prospecto tiene score 4-5 y temperatura hot/warm, la investigacion esta completa, y hay datos de contacto verificados.',
+        description: 'Envia este prospecto al CRM como contacto para ser contactado via WhatsApp por un agente de IA. Requiere telefono. Usalo cuando: score 4-5, temperatura hot/warm, investigacion completa y datos de contacto verificados.',
         inputSchema: z.object({
-          reason: z.string().min(10).describe('Justificacion detallada de por que este prospecto merece ser contactado. Incluye: que ofrece, por que es relevante, datos para romper el hielo, pain points detectados, y tono recomendado para WhatsApp.'),
+          reason: z.string().min(10).describe('Justificacion detallada para el agente de WhatsApp: que ofrece, relevancia, datos para romper el hielo, pain points, tono recomendado.'),
         }),
         execute: async ({ reason }) => {
           try {

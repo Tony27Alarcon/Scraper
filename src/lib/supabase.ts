@@ -14,7 +14,7 @@ const TEMP_MAP: Record<string, string> = {
   hot:  'caliente',
 }
 
-// --- Singleton ---
+// --- Cliente lazy (se evalúa en cada llamada para garantizar env vars actualizadas) ---
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabaseClient = ReturnType<typeof createClient<any, 'clinicas'>>
@@ -23,18 +23,20 @@ const globalForSupabase = globalThis as unknown as {
   supabase: AnySupabaseClient | undefined
 }
 
-function getClient(): AnySupabaseClient | null {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) return null
-  return createClient(url, key, { db: { schema: 'clinicas' } })
-}
+export function getSupabase(): { client: AnySupabaseClient | null; missing: string[] } {
+  if (globalForSupabase.supabase) return { client: globalForSupabase.supabase, missing: [] }
 
-export const supabase =
-  globalForSupabase.supabase ?? getClient()
+  const url = process.env.SUPABASE_URL?.trim()
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
-if (process.env.NODE_ENV !== 'production' && supabase) {
-  globalForSupabase.supabase = supabase
+  const missing: string[] = []
+  if (!url) missing.push('SUPABASE_URL')
+  if (!key) missing.push('SUPABASE_SERVICE_ROLE_KEY')
+  if (missing.length > 0) return { client: null, missing }
+
+  const client = createClient(url!, key!, { db: { schema: 'clinicas' } })
+  globalForSupabase.supabase = client
+  return { client, missing: [] }
 }
 
 // --- Tipos ---
@@ -155,8 +157,12 @@ function normalizePhone(phone: string): string {
 // --- Core send function ---
 
 export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promise<SendResult> {
+  const { client: supabase, missing } = getSupabase()
   if (!supabase) {
-    return { status: 'error', error: 'Supabase no está configurado. Añade SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY al .env' }
+    return {
+      status: 'error',
+      error: `Supabase no está configurado. Variables faltantes: ${missing.join(', ')}. Reinicia el servidor tras añadir las env vars.`,
+    }
   }
 
   if (!place.phone) {
@@ -170,16 +176,20 @@ export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promi
 
   try {
     // Check existing contact
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from('contacts')
       .select('id')
       .eq('company_id', BRUNO_LAB_COMPANY_ID)
       .eq('phone', phone)
       .maybeSingle()
 
+    if (selectError) {
+      return { status: 'error', error: `Error al consultar contacto existente: ${selectError.message}` }
+    }
+
     if (existing) {
       // Update existing contact
-      await supabase
+      const { error: updError } = await supabase
         .from('contacts')
         .update({
           name:        place.title ?? undefined,
@@ -190,8 +200,12 @@ export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promi
         })
         .eq('id', existing.id)
 
+      if (updError) {
+        return { status: 'error', error: `Error al actualizar contacto: ${updError.message}` }
+      }
+
       // Add new note with fresh context
-      await supabase
+      const { error: noteError } = await supabase
         .from('contacts_notas')
         .insert({
           company_id: BRUNO_LAB_COMPANY_ID,
@@ -199,6 +213,10 @@ export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promi
           content:    context,
           created_by: 'scraper',
         })
+
+      if (noteError) {
+        return { status: 'error', error: `Error al añadir nota: ${noteError.message}` }
+      }
 
       return { status: 'updated', contactId: existing.id }
     }
@@ -223,7 +241,7 @@ export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promi
     }
 
     // Add context note
-    await supabase
+    const { error: noteError } = await supabase
       .from('contacts_notas')
       .insert({
         company_id: BRUNO_LAB_COMPANY_ID,
@@ -231,6 +249,10 @@ export async function sendPlaceToCRM(place: PlaceForCRM, reason?: string): Promi
         content:    context,
         created_by: 'scraper',
       })
+
+    if (noteError) {
+      return { status: 'error', error: `Contacto creado pero falló la nota: ${noteError.message}` }
+    }
 
     return { status: 'created', contactId: newContact.id }
   } catch (err) {
